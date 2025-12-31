@@ -89,6 +89,65 @@ async function callHuggingFace(config: LLMConfig, messages: any[]) {
 }
 
 /**
+ * Helper function to execute a single LLM call with a given configuration
+ */
+async function executeLLMCall(
+  config: LLMConfig,
+  messages: any[],
+  responseMimeType?: string
+): Promise<any> {
+  let response;
+
+  // Intelligent provider routing
+  switch (config.provider) {
+    case "openrouter":
+      console.log(`[llmRouter] Routing to OpenRouter...`);
+      response = await callOpenRouter(config, messages, responseMimeType);
+      break;
+
+    case "huggingface":
+      console.log(`[llmRouter] Routing to Hugging Face...`);
+      response = await callHuggingFace(config, messages);
+      break;
+
+    default:
+      throw new Error(`Unknown provider: ${config.provider}`);
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[llmRouter] ${config.provider} API Error:`, {
+      provider: config.provider,
+      model: config.model,
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    });
+
+    throw new Error(`${config.provider} API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  // Normalize response format based on provider
+  let normalizedResponse;
+  if (config.provider === "openrouter") {
+    normalizedResponse = result; // Already in OpenAI format
+  } else if (config.provider === "huggingface") {
+    // Convert HF format to OpenAI-like format
+    normalizedResponse = {
+      choices: [{
+        message: {
+          content: Array.isArray(result) ? result[0]?.generated_text : result.generated_text || ""
+        }
+      }]
+    };
+  }
+
+  return normalizedResponse;
+}
+
+/**
  * Executes an LLM call with intelligent provider routing.
  * Automatically detects provider and routes to appropriate API.
  */
@@ -106,90 +165,31 @@ export async function runLLM(task: {
     error?: Error
 }> {
   const startTime = performance.now();
-  
+
   const criteria = task.criteria || 'balanced';
   const config = pickBanditModel(task.agent, criteria, 0.1);
 
   console.log(`[llmRouter] Agent "${task.agent}" (criteria: ${criteria}) → Provider: ${config.provider}, Model: "${config.model}"`);
-  
+
   // Prepare messages for all providers
   // Certains modèles ne supportent pas le rôle "system", on combine avec user
   const messages = [];
-  
+
   let userContent = task.input;
   if (task.systemInstruction) {
       // Combiner les instructions système avec le message utilisateur
       userContent = `${task.systemInstruction}\n\nUser: ${task.input}`;
   }
-  
+
   messages.push({
       role: "user",
       content: userContent
   });
 
   try {
-    let response;
-    
-    // Intelligent provider routing
-    switch (config.provider) {
-      case "openrouter":
-        console.log(`[llmRouter] Routing to OpenRouter...`);
-        response = await callOpenRouter(config, messages, task.responseMimeType);
-        break;
-        
-      case "huggingface":
-        console.log(`[llmRouter] Routing to Hugging Face...`);
-        response = await callHuggingFace(config, messages);
-        break;
-        
-      default:
-        throw new Error(`Unknown provider: ${config.provider}`);
-    }
-
+    const normalizedResponse = await executeLLMCall(config, messages, task.responseMimeType);
     const endTime = performance.now();
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[llmRouter] ${config.provider} API Error:`, {
-            provider: config.provider,
-            model: config.model,
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText
-        });
-        
-        // Si le modèle n'est pas disponible (404), essayons un fallback
-        if (response.status === 404 && errorText.includes("No endpoints found")) {
-            console.warn(`[llmRouter] Model ${config.model} not available, trying fallback...`);
-            // Essayons avec un modèle de fallback simple
-            const fallbackModel = "mistralai/mistral-7b-instruct:free";
-            if (config.model !== fallbackModel) {
-                console.log(`[llmRouter] Retrying with fallback model: ${fallbackModel}`);
-                const fallbackConfig = { ...config, model: fallbackModel };
-                return await callOpenRouter(fallbackConfig, messages, responseMimeType);
-            }
-        }
-        
-        throw new Error(`${config.provider} API error: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const result = await response.json();
-    
-    // Normalize response format based on provider
-    let normalizedResponse;
-    if (config.provider === "openrouter") {
-      normalizedResponse = result; // Already in OpenAI format
-    } else if (config.provider === "huggingface") {
-      // Convert HF format to OpenAI-like format
-      normalizedResponse = {
-        choices: [{
-          message: {
-            content: Array.isArray(result) ? result[0]?.generated_text : result.generated_text || ""
-          }
-        }]
-      };
-    }
-    
     return {
       response: normalizedResponse,
       modelId: config.model,
@@ -197,17 +197,54 @@ export async function runLLM(task: {
       success: true
     };
   } catch (error: any) {
-    const endTime = performance.now();
     console.error(`[llmRouter] ${config.provider} API call failed:`, error.message);
-    
-    // TODO: Implement fallback strategy here
-    // For now, return the error
+
+    // Implement fallback strategy
+    // Try alternative models if the primary one fails
+    const fallbackModels = [
+      "mistralai/mistral-7b-instruct:free",
+      "google/gemma-2-9b-it:free",
+      "meta-llama/llama-3-8b-instruct:free"
+    ];
+
+    // Only try fallbacks if we haven't already used them as primary
+    for (const fallbackModel of fallbackModels) {
+      if (config.model === fallbackModel) {
+        continue; // Skip if this was the primary model that failed
+      }
+
+      try {
+        console.warn(`[llmRouter] Trying fallback model: ${fallbackModel}`);
+        const fallbackConfig: LLMConfig = {
+          ...config,
+          model: fallbackModel,
+          provider: "openrouter" // Fallback models are on OpenRouter
+        };
+
+        const normalizedResponse = await executeLLMCall(fallbackConfig, messages, task.responseMimeType);
+        const endTime = performance.now();
+
+        console.log(`[llmRouter] Fallback successful with model: ${fallbackModel}`);
+        return {
+          response: normalizedResponse,
+          modelId: fallbackModel,
+          latency: endTime - startTime,
+          success: true
+        };
+      } catch (fallbackError: any) {
+        console.warn(`[llmRouter] Fallback model ${fallbackModel} also failed:`, fallbackError.message);
+        // Continue to next fallback
+      }
+    }
+
+    // All fallbacks failed, return error
+    const endTime = performance.now();
     return {
       response: null,
       modelId: config.model,
       latency: endTime - startTime,
       success: false,
-      error
+      error: error instanceof Error ? error : new Error(String(error))
     };
   }
 }
