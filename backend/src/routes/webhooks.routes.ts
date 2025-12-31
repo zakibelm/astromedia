@@ -4,9 +4,26 @@
 // Receives webhooks from external services (Instagram, etc.)
 
 import { Router } from 'express';
+import { createHmac } from 'crypto';
 import { queueInstagramMessage } from '../queues';
 
 const router = Router();
+
+// =====================================
+// HELPER: Verify Instagram Signature
+// =====================================
+function verifyInstagramSignature(payload: string, signature: string | undefined, secret: string): boolean {
+  if (!signature) {
+    return false;
+  }
+
+  // Instagram sends signature as 'sha256=<hash>'
+  const expectedSignature = 'sha256=' + createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return signature === expectedSignature;
+}
 
 // =====================================
 // INSTAGRAM WEBHOOK
@@ -17,11 +34,18 @@ router.post('/instagram', async (req, res) => {
     const payload = req.body;
 
     // Verify webhook signature (Instagram requirement)
-    // TODO: Implement signature verification
-    // const signature = req.headers['x-hub-signature-256'];
-    // if (!verifySignature(payload, signature)) {
-    //   return res.status(401).json({ error: 'Invalid signature' });
-    // }
+    const signature = req.headers['x-hub-signature-256'] as string | undefined;
+    const appSecret = process.env.INSTAGRAM_APP_SECRET;
+
+    if (appSecret) {
+      const rawBody = JSON.stringify(payload);
+      if (!verifyInstagramSignature(rawBody, signature, appSecret)) {
+        console.warn('[Webhook] Invalid Instagram signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+    } else {
+      console.warn('[Webhook] INSTAGRAM_APP_SECRET not configured, skipping signature verification');
+    }
 
     // Parse Instagram webhook payload
     const entry = payload.entry?.[0];

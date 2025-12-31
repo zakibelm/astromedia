@@ -134,9 +134,6 @@ ${sentiment === 'positive' ? 'Le client est content. Remercie-le chaleureusement
 // =====================================
 
 async function sendInstagramReply(messageId: string, reply: string): Promise<void> {
-  // TODO: Implement actual Instagram API call
-  // For now, just log it
-
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
 
   if (!accessToken) {

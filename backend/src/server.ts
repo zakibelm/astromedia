@@ -18,6 +18,7 @@ import campaignRoutes from './routes/campaign.routes';
 import assetRoutes from './routes/asset.routes';
 import userRoutes from './routes/user.routes';
 import healthRoutes from './routes/health.routes';
+import webhookRoutes from './routes/webhooks.routes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -86,6 +87,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/campaigns', campaignRoutes);
 app.use('/api/v1/assets', assetRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/webhooks', webhookRoutes);
 
 // Metrics endpoint (Prometheus)
 app.get('/metrics', async (req, res) => {
