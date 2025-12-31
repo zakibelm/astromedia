@@ -13,7 +13,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     <div className="min-h-screen bg-[#10051a] text-white">
       <Header onStart={onStart} />
       <main>
-        <Hero />
+        <Hero onStart={onStart} />
         <Features />
       </main>
       <Footer />
