@@ -7,7 +7,7 @@ interface SidebarProps {
     setCurrentView: (view: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
+const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     const { t } = useTranslation();
 
     const menuItems = [
@@ -39,8 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
                             key={item.id}
                             onClick={() => setCurrentView(item.id)}
                             className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${isActive
-                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <svg
@@ -74,4 +74,4 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     );
 };
 
-export default Sidebar;
+export default AppSidebar;

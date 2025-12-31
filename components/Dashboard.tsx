@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Sidebar from './Sidebar';
+import AppSidebar from './AppSidebar';
 import MainContent from './MainContent';
 import Header from './Header';
 import AIAssistantWidget from './AIAssistantWidget';
@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-[#10051a] to-[#190729] text-white overflow-hidden">
-            <Sidebar
+            <AppSidebar
                 currentView={currentView}
                 setCurrentView={setCurrentView}
             />
