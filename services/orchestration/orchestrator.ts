@@ -92,16 +92,53 @@ export const getCampaignLogger = () => CampaignLogger.getInstance();
 
 // --- Orchestrator Logic ---
 
-const orchestratorLock = { isUnlocking: false };
+/**
+ * Simple async mutex implementation to prevent race conditions
+ */
+class AsyncMutex {
+  private locked: boolean = false;
+  private queue: Array<() => void> = [];
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+
+  async runExclusive<T>(fn: () => T | Promise<T>): Promise<T> {
+    await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.release();
+    }
+  }
+}
+
+const unlockMutex = new AsyncMutex();
 
 function hasInputs(phase: Phase, ctx: Record<string, any>) {
   const result = phase.inputs.every((k) => ctx[k] !== undefined);
-  
+
   if (!result) {
     const missing = phase.inputs.filter(k => ctx[k] === undefined);
     console.log(`[Orchestrator] Phase "${phase.id}" missing inputs:`, missing.join(', '));
   }
-  
+
   return result;
 }
 
@@ -154,22 +191,14 @@ function unlockDependents(
   }
 }
 
-function safeUnlockDependents(
+async function safeUnlockDependents(
   phases: Phase[],
   state: CampaignState,
   events?: OrchestratorEvents
-) {
-  if (orchestratorLock.isUnlocking) {
-    console.warn('[Orchestrator] Concurrent unlock attempt detected and blocked.');
-    return;
-  }
-  
-  orchestratorLock.isUnlocking = true;
-  try {
+): Promise<void> {
+  await unlockMutex.runExclusive(() => {
     unlockDependents(phases, state, events);
-  } finally {
-    orchestratorLock.isUnlocking = false;
-  }
+  });
 }
 
 export function runPlaybookParallel({
@@ -296,7 +325,7 @@ export function runPlaybookParallel({
             state.statusByPhase[phase.id] = "completed";
             events?.onPhaseStatus?.(phase.id, "completed");
             logger.logPhase(campaignId, { phaseId: phase.id, status: 'completed', latency: Date.now() - startTime, payload: cleanPayload });
-            safeUnlockDependents(phases, state, events);
+            await safeUnlockDependents(phases, state, events);
           }
         } catch (err: any) {
           logger.logPhase(campaignId, { phaseId: phase.id, status: 'failed', latency: Date.now() - startTime, error: err.message });

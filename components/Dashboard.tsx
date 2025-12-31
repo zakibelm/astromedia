@@ -126,6 +126,15 @@ const Dashboard: React.FC = () => {
                 campaignId: newCampaignId
             });
             orchestratorInstanceRef.current = orchestrator;
+
+            // Handle promise rejection to prevent unhandled rejection errors
+            orchestrator.promise.catch((error: any) => {
+                console.error(`[Dashboard] Orchestrator promise rejected:`, error);
+                setActiveCampaign(null);
+                setCampaignId(null);
+                setWorkflowStatus({});
+                alert(`Erreur durant l'exécution de la campagne: ${error.message}\n\nVeuillez vérifier la console pour plus de détails.`);
+            });
         } catch (error: any) {
             console.error(`[Dashboard] Erreur lors du lancement de la campagne:`, error);
             // Reset l'état en cas d'erreur pour éviter l'écran noir
