@@ -1,345 +1,77 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from '../i18n/useTranslation';
-import { DEPARTMENTS, AGENT_PROFILES } from '../constants/agents';
-import { AgentStatus, AgentProfileData, NewCampaignFormData, GovernanceMode } from '../types';
-import LanguageSwitcher from './LanguageSwitcher';
 import Logo from './Logo';
 
-// --- Components moved from MainContent for the unified cockpit ---
-
-const LiveDashboard: React.FC<{ campaign: NewCampaignFormData }> = ({ campaign }) => {
-    const { t } = useTranslation();
-    const kpis = { ctr: '4.2%', roas: '3.8' };
-
-    return (
-        <div className="space-y-2">
-            <div className="bg-[#1e1e36] p-3 rounded-md border border-slate-700">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{t('overview.dashboard.kpis')}</h4>
-                <p className="text-lg font-semibold text-white">CTR: {kpis.ctr} | ROAS: {kpis.roas}</p>
-            </div>
-            <div className="bg-[#1e1e36] p-3 rounded-md border border-slate-700">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{t('overview.dashboard.objective')}</h4>
-                <p className="text-sm font-semibold text-white leading-tight">{campaign.campaignGoals.objectives[0] || t('overview.dashboard.notDefined')}</p>
-            </div>
-            <div className="bg-[#1e1e36] p-3 rounded-md border border-slate-700">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{t('overview.dashboard.liveStatus')}</h4>
-                <p className="text-sm font-semibold text-white">3 posts planifiés, 1 article en validation</p>
-            </div>
-        </div>
-    );
-};
-
-const ProactiveInsights: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <div className="bg-[#2c2c4a] p-3 rounded-md border-l-4 border-amber-400">
-            <p className="text-sm text-slate-300 mb-2">{t('overview.insights.insight1')}</p>
-            <div className="flex flex-wrap gap-2">
-                <button className="px-2 py-1 text-xs font-semibold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-md transition-colors">{t('overview.insights.approve')}</button>
-                <button className="px-2 py-1 text-xs font-semibold text-white bg-slate-600/50 hover:bg-slate-500/50 rounded-md transition-colors">{t('overview.insights.reject')}</button>
-                <button className="px-2 py-1 text-xs font-semibold text-white bg-slate-600/50 hover:bg-slate-500/50 rounded-md transition-colors">{t('overview.insights.regenerate')}</button>
-            </div>
-        </div>
-    );
+interface SidebarProps {
+    currentView: string;
+    setCurrentView: (view: string) => void;
 }
 
-
-const AgentItem: React.FC<{ agent: AgentProfileData, isSubItem?: boolean }> = ({ agent, isSubItem = false }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     const { t } = useTranslation();
-    
-    const statusStyles: Record<AgentStatus, { bg: string; text: string; dot: string; shadow: string }> = {
-        active: { bg: 'bg-green-500/10', text: 'text-green-300', dot: 'bg-green-400', shadow: 'shadow-[0_0_8px_rgba(52,211,153,0.5)]' },
-        waiting: { bg: 'bg-yellow-500/10', text: 'text-yellow-300', dot: 'bg-yellow-400', shadow: '' },
-        inactive: { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-500', shadow: '' },
-    };
 
-    const styles = statusStyles[agent.status];
-    const dotAnimation = agent.status === 'active' ? 'animate-pulse' : '';
-
-    return (
-        <div className={`flex items-center p-2.5 rounded-lg ${isSubItem ? 'pl-8' : ''}`}>
-            <div className="mr-3">{agent.icon}</div>
-            <div className="flex-grow">
-                <p className="font-semibold text-sm text-white">{t(agent.nameKey)}</p>
-                <p className="text-xs text-gray-400">{t(agent.descriptionKey)}</p>
-            </div>
-            <div className={`text-xs font-medium px-2.5 py-1 rounded-full ${styles.text} shrink-0`}>
-                 <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${styles.dot} ${dotAnimation} ${styles.shadow}`}></span>
-                 {t(`agent.status.${agent.status}`)}
-            </div>
-        </div>
-    );
-}
-
-// --- Modals for Cockpit Interactivity ---
-
-const AgentStatusModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const { t } = useTranslation();
-    const statuses: AgentStatus[] = ['active', 'waiting', 'inactive'];
-    const agentsByStatus = statuses.map(status => ({
-        status,
-        agents: AGENT_PROFILES.filter(a => a.status === status)
-    }));
-
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in" onClick={onClose}>
-            <div className="bg-[#160e1b] rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-700" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white">{t('modals.agents.title')}</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
-                </div>
-                <div className="p-2 flex-grow overflow-y-auto">
-                    {agentsByStatus.map(({ status, agents }) => (
-                        <div key={status} className="p-4">
-                            <h3 className="font-semibold text-gray-400 uppercase tracking-wider text-sm mb-2">{t(`agent.status.${status}`)} ({agents.length})</h3>
-                            <div className="space-y-1">
-                                {agents.length > 0 ? agents.map(agent => <AgentItem key={agent.id} agent={agent} />) : <p className="text-slate-500 text-sm px-2.5 italic">No agents with this status.</p>}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    )
-};
-
-const CampaignProgressModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const { t } = useTranslation();
-    const phases = [
-      { nameKey: 'phases.strategy', status: 'completed' },
-      { nameKey: 'phases.creative', status: 'inprogress' },
-      { nameKey: 'phases.distribution', status: 'pending' },
-      { nameKey: 'phases.feedback', status: 'pending' },
+    const menuItems = [
+        { id: 'dashboard', label: 'Tableau de bord', icon: <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> },
+        { id: 'agents', label: "Équipe d'Agents AI", icon: <path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /> },
+        { id: 'nanobanana', label: 'Lab NanoBanana', icon: <path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /> },
+        { id: 'creator', label: 'Créateur de Campagne', icon: <path d="M13 10V3L4 14h7v7l9-11h-7z" /> },
+        { id: 'studio', label: 'Studio Créatif', icon: <path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /> },
+        { id: 'gallery', label: 'Médiathèque', icon: <path d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5z" /> }, // Gallery Link
+        { id: 'analytics', label: 'Analyses', icon: <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /> },
     ];
-    const statusStyles = {
-        completed: { text: 'text-green-400', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-        inprogress: { text: 'text-yellow-400', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-        pending: { text: 'text-gray-400', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in" onClick={onClose}>
-            <div className="bg-[#160e1b] rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-slate-700" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white">{t('modals.progress.title')}</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <aside className="w-64 bg-[#10051a] flex flex-col border-r border-white/5 shrink-0 h-screen font-sans">
+            {/* Header / Logo */}
+            <div className="p-6 mb-2">
+                <div className="flex items-center space-x-3 mb-1">
+                    <Logo size="sm" />
                 </div>
-                <div className="p-6 flex-grow overflow-y-auto">
-                    <ol className="relative border-l border-slate-700">
-                        {phases.map((phase, index) => {
-                            const styles = statusStyles[phase.status as keyof typeof statusStyles];
-                            return (
-                                <li key={index} className="mb-10 ml-6">
-                                    <span className={`absolute flex items-center justify-center w-6 h-6 bg-slate-800 rounded-full -left-3 ring-8 ring-[#160e1b] ${styles.text}`}>
-                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d={styles.icon} clipRule="evenodd"></path></svg>
-                                    </span>
-                                    <h3 className="flex items-center mb-1 text-lg font-semibold text-white">{t(phase.nameKey)}</h3>
-                                    <p className={`block mb-2 text-sm font-normal leading-none ${styles.text}`}>{t(`phases.status.${phase.status}`)}</p>
-                                </li>
-                            );
-                        })}
-                    </ol>
-                </div>
+                <p className="text-[10px] text-gray-400 tracking-widest pl-1 uppercase">Next-Gen Media Suite</p>
             </div>
-        </div>
-    )
-};
 
-
-const CockpitView: React.FC<{ 
-    onOpenAgentsModal: () => void, 
-    onOpenProgressModal: () => void, 
-    campaign: NewCampaignFormData | null,
-    setCampaign: React.Dispatch<React.SetStateAction<NewCampaignFormData | null>>,
-    onNewCampaign: () => void;
-}> = ({ onOpenAgentsModal, onOpenProgressModal, campaign, setCampaign, onNewCampaign }) => {
-    const { t } = useTranslation();
-    const activeAgents = AGENT_PROFILES.filter(a => a.status === 'active').length;
-    const totalAgents = AGENT_PROFILES.length;
-    const campaignProgress = 40; // Hardcoded for demo
-    const [isGovernanceOpen, setIsGovernanceOpen] = useState(false);
-
-    const governanceStyles: Record<GovernanceMode, { text: string; dot: string; labelKey: string }> = {
-        'follow': { text: 'text-green-400', dot: 'bg-green-400', labelKey: 'governance.follow' },
-        'semi-auto': { text: 'text-yellow-400', dot: 'bg-yellow-400', labelKey: 'governance.semi-auto' },
-        'full': { text: 'text-blue-400', dot: 'bg-blue-400', labelKey: 'governance.full' },
-    };
-    
-    const handleModeChange = (mode: GovernanceMode) => {
-        if (campaign) {
-            setCampaign({ ...campaign, governanceMode: mode });
-        }
-        setIsGovernanceOpen(false);
-    }
-
-    return (
-        <div className="mb-6 p-4 bg-[#15152b] rounded-lg border border-slate-800">
-             <h2 className="text-lg font-bold text-amber-400 mb-4">{t('sidebar.cockpit.title')}</h2>
-             
-             {campaign ? (
-                // --- ACTIVE CAMPAIGN VIEW ---
-                <div className="space-y-3">
-                    <button onClick={onOpenAgentsModal} className="w-full text-left p-2 rounded-md hover:bg-white/5 transition-colors">
-                        <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-slate-300">{t('sidebar.cockpit.activeAgents')}</span>
-                            <span className="font-semibold text-white">{activeAgents} / {totalAgents}</span>
-                        </div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-cyan-400 h-1.5 rounded-full transition-all duration-500 ease-in-out animate-pulse" style={{width: `${(activeAgents/totalAgents)*100}%`}}></div>
-                        </div>
-                    </button>
-                    <button onClick={onOpenProgressModal} className="w-full text-left p-2 rounded-md hover:bg-white/5 transition-colors">
-                        <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-slate-300">{t('sidebar.cockpit.campaignProgress')}</span>
-                            <span className="font-semibold text-white">{campaignProgress}%</span>
-                        </div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5 flex overflow-hidden">
-                            <div className="bg-green-500 h-full transition-all duration-500 ease-in-out" style={{width: '25%'}}></div>
-                            <div className="bg-yellow-500 h-full transition-all duration-500 ease-in-out" style={{width: '15%'}}></div>
-                        </div>
-                    </button>
-                    <div className="relative p-2">
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-300">{t('sidebar.cockpit.governanceMode')}</span>
-                            <button onClick={() => setIsGovernanceOpen(!isGovernanceOpen)} className={`font-semibold ${governanceStyles[campaign.governanceMode].text} flex items-center p-1 rounded-md hover:bg-white/10`}>
-                                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${governanceStyles[campaign.governanceMode].dot}`}></span>
-                                {t(governanceStyles[campaign.governanceMode].labelKey)}
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            </button>
-                        </div>
-                        {isGovernanceOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-[#2a1d35] border border-slate-700 rounded-md shadow-lg z-10 animate-fade-in-up-sm">
-                                {(Object.keys(governanceStyles) as GovernanceMode[]).map(mode => (
-                                    <button key={mode} onClick={() => handleModeChange(mode)} className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 flex items-center">
-                                        <span className={`inline-block w-2 h-2 rounded-full mr-3 ${governanceStyles[mode].dot}`}></span>
-                                        {t(governanceStyles[mode].labelKey)}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <div className="border-t border-slate-700/50 my-3"></div>
-                    <LiveDashboard campaign={campaign} />
-                    <div className="border-t border-slate-700/50 my-3"></div>
-                    <ProactiveInsights />
-                </div>
-             ) : (
-                // --- EMPTY STATE VIEW ---
-                <div className="space-y-3">
-                    <div className="w-full text-left p-2 rounded-md opacity-60 cursor-default">
-                        <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-slate-300">{t('sidebar.cockpit.activeAgents')}</span>
-                            <span className="font-semibold text-white">0 / {totalAgents}</span>
-                        </div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-cyan-400 h-1.5 rounded-full" style={{width: '0%'}}></div>
-                        </div>
-                    </div>
-                    <div className="w-full text-left p-2 rounded-md opacity-60 cursor-default">
-                        <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-slate-300">{t('sidebar.cockpit.campaignProgress')}</span>
-                            <span className="font-semibold text-white">0%</span>
-                        </div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5"></div>
-                    </div>
-                    <div className="pt-6 text-center border-t border-slate-700/50 mt-4">
-                        <p className="text-sm text-slate-400 mb-4">{t('sidebar.cockpit.noCampaign')}</p>
-                        <button onClick={onNewCampaign} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-semibold py-2.5 px-4 rounded-md hover:from-amber-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-orange-500/20 transform hover:-translate-y-px flex items-center justify-center text-sm animate-gradient">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            {t('sidebar.button.newCampaign')}
-                        </button>
-                    </div>
-                </div>
-             )}
-        </div>
-    )
-}
-
-const DepartmentList: React.FC = () => {
-    const { t } = useTranslation();
-    const [openDepartment, setOpenDepartment] = useState<string | null>('strategy');
-
-    const toggleDepartment = (key: string) => {
-        setOpenDepartment(prev => (prev === key ? null : key));
-    };
-    
-    return (
-        <>
-            <div className="flex justify-between items-center mt-6 mb-3 px-2">
-                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">{t('sidebar.agents.title')}</h2>
-            </div>
-            <nav className="space-y-1.5 flex-grow">
-                {DEPARTMENTS.map(dept => {
-                    const isOpen = openDepartment === dept.key;
-                    const specializedAgents = AGENT_PROFILES.filter(agent => agent.departmentKey === dept.key);
+            {/* Navigation */}
+            <nav className="flex-1 px-3 space-y-1">
+                {menuItems.map((item) => {
+                    const isActive = currentView === item.id;
                     return (
-                        <div key={dept.key}>
-                            <button onClick={() => toggleDepartment(dept.key)} className="w-full flex items-center p-2.5 rounded-lg transition-colors hover:bg-white/5 text-left">
-                                <div className="mr-3">{dept.icon}</div>
-                                <div className="flex-grow">
-                                    <p className="font-semibold text-sm text-white">{t(dept.nameKey)}</p>
-                                    <p className="text-xs text-gray-400">{t(dept.descriptionKey)}</p>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 transition-transform transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            {isOpen && (
-                                <div className="py-1 space-y-1">
-                                    {specializedAgents.map(agent => (
-                                        <AgentItem key={agent.id} agent={agent} isSubItem />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )
+                        <button
+                            key={item.id}
+                            onClick={() => setCurrentView(item.id)}
+                            className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${isActive
+                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <svg
+                                className={`mr-3 h-5 w-5 transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-purple-400'}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                            >
+                                {item.icon}
+                            </svg>
+                            {item.label}
+                        </button>
+                    );
                 })}
             </nav>
-        </>
-    )
-}
 
-
-interface SidebarProps {
-    onNewCampaign: () => void;
-    activeCampaign: NewCampaignFormData | null;
-    setActiveCampaign: React.Dispatch<React.SetStateAction<NewCampaignFormData | null>>;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ onNewCampaign, activeCampaign, setActiveCampaign }) => {
-  const { t } = useTranslation();
-  const [modalView, setModalView] = useState<'agents' | 'progress' | null>(null);
-
-  return (
-    <aside className="w-96 bg-[#160e1b] flex flex-col p-4 border-r border-white/10 shrink-0 overflow-y-auto">
-      <div className="flex items-center justify-between mb-6 p-2">
-        <div className="flex items-center space-x-3">
-            <Logo size="sm" />
-            <div>
-                <h1 className="text-lg font-bold text-white">
-                    Astro<span className="text-amber-400 [text-shadow:1px_1px_#b91c1c]">Media</span>
-                </h1>
-                <p className="text-xs text-gray-400">{t('app.subtitle')}</p>
+            {/* User Profile Footer */}
+            <div className="p-4 border-t border-white/5">
+                <div className="flex items-center p-3 rounded-xl bg-[#1a1025] border border-white/5">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
+                        JD
+                    </div>
+                    <div className="ml-3">
+                        <p className="text-xs font-bold text-white">JD-Enterprise-01</p>
+                        <p className="text-[10px] text-gray-400">Pro Tier Active</p>
+                    </div>
+                </div>
             </div>
-        </div>
-        <LanguageSwitcher />
-      </div>
-      
-      <CockpitView 
-          onOpenAgentsModal={() => setModalView('agents')}
-          onOpenProgressModal={() => setModalView('progress')}
-          campaign={activeCampaign}
-          setCampaign={setActiveCampaign}
-          onNewCampaign={onNewCampaign}
-      />
-      <DepartmentList />
-      
-      {modalView === 'agents' && <AgentStatusModal onClose={() => setModalView(null)} />}
-      {modalView === 'progress' && <CampaignProgressModal onClose={() => setModalView(null)} />}
-    </aside>
-  );
+        </aside>
+    );
 };
 
 export default Sidebar;

@@ -1,0 +1,7 @@
+npm ERR! code ETARGET
+npm ERR! notarget No matching version found for @google/genai@^0.1.0.
+npm ERR! notarget In most cases you or one of your dependencies are requesting
+npm ERR! notarget a package version that doesn't exist.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     C:\Users\zakib\AppData\Local\npm-cache\_logs\2025-12-31T03_00_22_587Z-debug-0.log

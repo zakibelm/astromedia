@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
+import Header from './Header';
 import AIAssistantWidget from './AIAssistantWidget';
+import Gallery from './Gallery/Gallery';
 import { NewCampaignFormData, WorkflowState, GovernanceMode, KnowledgeFile } from '../types';
 import { defaultPlaybook } from '../services/orchestration/playbook';
 import { runPlaybookParallel } from '../services/orchestration/orchestrator';
@@ -20,12 +22,13 @@ const mapGovernanceMode = (mode: GovernanceMode): Mode => {
 };
 
 const Dashboard: React.FC = () => {
+    const [currentView, setCurrentView] = useState('dashboard');
     const [activeCampaign, setActiveCampaign] = useState<NewCampaignFormData | null>(null);
     const [campaignId, setCampaignId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [workflowStatus, setWorkflowStatus] = useState<WorkflowState>({});
     const [knowledgeFiles, setKnowledgeFiles] = useState<KnowledgeFile[]>([]);
-    
+
     // Garde une référence stable à l'état de l'orchestrateur et à l'instance elle-même
     const orchestratorStateRef = useRef<CampaignState | null>(null);
     const orchestratorInstanceRef = useRef<{ stop: () => void } | null>(null);
@@ -63,28 +66,28 @@ const Dashboard: React.FC = () => {
             const newCampaignId = `campaign_${crypto.randomUUID()}`;
             setCampaignId(newCampaignId);
 
-        const initialState: CampaignState = {
-            mode: mapGovernanceMode(formData.governanceMode),
-            statusByPhase: { briefing: 'completed' },
-            triesByPhase: {},
-            awaitingHumanApproval: new Set(),
-            context: {
-                brandProfile: `${formData.companyInfo.name} (${formData.companyInfo.website || 'site non fourni'}) - ${formData.companyInfo.sector}. Valeurs: ${formData.brandIdentity.brandValues}`,
-                goals: formData.campaignGoals.objectives.join(', '),
-                persona: formData.campaignGoals.targetAudience,
-                budget: `${formData.campaignGoals.budget.amount} ${formData.campaignGoals.budget.currency}`,
-                timeline: formData.campaignGoals.duration,
-                briefContext: JSON.stringify(formData, null, 2),
-                tone: formData.brandIdentity.tone,
-                socialLinks: formData.brandIdentity.socialLinks,
-                visuals: 'Visuels à générer basés sur la stratégie de contenu.',
-                analysisDepth: formData.analysisDepth,
-                agentConfiguration: formData.agentConfiguration, // NEW
-                ragEnabled: formData.ragEnabled, // NEW
-                knowledgeBase: [], // NEW - Initialized as empty
-            }
-        };
-        orchestratorStateRef.current = initialState;
+            const initialState: CampaignState = {
+                mode: mapGovernanceMode(formData.governanceMode),
+                statusByPhase: { briefing: 'completed' },
+                triesByPhase: {},
+                awaitingHumanApproval: new Set(),
+                context: {
+                    brandProfile: `${formData.companyInfo.name} (${formData.companyInfo.website || 'site non fourni'}) - ${formData.companyInfo.sector}. Valeurs: ${formData.brandIdentity.brandValues}`,
+                    goals: formData.campaignGoals.objectives.join(', '),
+                    persona: formData.campaignGoals.targetAudience,
+                    budget: `${formData.campaignGoals.budget.amount} ${formData.campaignGoals.budget.currency}`,
+                    timeline: formData.campaignGoals.duration,
+                    briefContext: JSON.stringify(formData, null, 2),
+                    tone: formData.brandIdentity.tone,
+                    socialLinks: formData.brandIdentity.socialLinks,
+                    visuals: 'Visuels à générer basés sur la stratégie de contenu.',
+                    analysisDepth: formData.analysisDepth,
+                    agentConfiguration: formData.agentConfiguration, // NEW
+                    ragEnabled: formData.ragEnabled, // NEW
+                    knowledgeBase: [], // NEW - Initialized as empty
+                }
+            };
+            orchestratorStateRef.current = initialState;
 
             const events = {
                 onPhaseStatus: (id: string, status: PhaseStatus) => {
@@ -162,7 +165,7 @@ const Dashboard: React.FC = () => {
             }, phaseId, reason);
         }
     };
-    
+
     // S'assure de stopper l'orchestrateur au démontage du composant
     useEffect(() => {
         return () => {
@@ -171,25 +174,41 @@ const Dashboard: React.FC = () => {
     }, []);
 
     return (
-        <div className="flex h-screen bg-gradient-to-br from-[#10051a] to-[#190729] text-white">
+        <div className="flex h-screen bg-gradient-to-br from-[#10051a] to-[#190729] text-white overflow-hidden">
             <Sidebar
-                onNewCampaign={handleNewCampaignRequest}
-                activeCampaign={activeCampaign}
-                setActiveCampaign={setActiveCampaign}
+                currentView={currentView}
+                setCurrentView={setCurrentView}
             />
-            <MainContent
-                isModalOpen={isModalOpen}
-                onCloseModal={handleCloseModal}
-                onLaunchCampaign={handleLaunchCampaign}
-                activeCampaign={activeCampaign}
-                workflowStatus={workflowStatus}
-                onNewCampaignRequest={handleNewCampaignRequest}
-                campaignId={campaignId}
-                onApprovePhase={handleApprovePhase}
-                onRejectPhase={handleRejectPhase}
-                knowledgeFiles={knowledgeFiles}
-                onAddFile={handleAddFile}
-            />
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Header here if needed, or inside MainContent/Gallery? Header was "Topbar" in plan. Header needs to be outside MainContent if it spans full width. */}
+                {/* Actually Sidebar + Main Layout usually means Header is next to Sidebar or above. 
+                    The design implies Header is Top Bar next to Sidebar. 
+                    Let's assume Header logic is wanted here or inside components. 
+                    I'll add Header here for consistency with Layout. 
+                */}
+                <Header onStart={handleNewCampaignRequest} />
+
+                <main className="flex-1 overflow-hidden relative">
+                    {currentView === 'gallery' ? (
+                        <Gallery />
+                    ) : (
+                        <MainContent
+                            isModalOpen={isModalOpen}
+                            onCloseModal={handleCloseModal}
+                            onLaunchCampaign={handleLaunchCampaign}
+                            activeCampaign={activeCampaign}
+                            workflowStatus={workflowStatus}
+                            onNewCampaignRequest={handleNewCampaignRequest}
+                            campaignId={campaignId}
+                            onApprovePhase={handleApprovePhase}
+                            onRejectPhase={handleRejectPhase}
+                            knowledgeFiles={knowledgeFiles}
+                            onAddFile={handleAddFile}
+                        />
+                    )}
+                </main>
+            </div>
+
             <AIAssistantWidget />
         </div>
     );

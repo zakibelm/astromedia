@@ -299,6 +299,9 @@ model KnowledgeFile {
   chunkCount    Int      @default(0)
 
   createdAt     DateTime @default(now())
+  
+  agentId       String?
+  agent         AIAgent? @relation(fields: [agentId], references: [id])
 
   @@index([userId])
 }
@@ -676,4 +679,48 @@ model AgentMetrics {
   @@index([agentType])
   @@index([period])
   @@map("agent_metrics")
+}
+
+// =====================
+// GALLERY SYSTEM (User-Defined)
+// =====================
+
+model AIAgent {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  role          String
+  model         String   // gpt-4, claude-3, etc.
+  systemPrompt  String   @db.Text
+  avatarUrl     String?
+
+  // RAG Configuration
+  ragEnabled    Boolean  @default(false)
+  // Simple relation for V1 - knowledgeFiles associated with this agent
+  knowledgeFiles KnowledgeFile[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Workflow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  description   String?
+  steps         Json     // Array of steps config
+  
+  // Orchestrator Config
+  orchestratorPrompt String? @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
 }

@@ -3,22 +3,30 @@
   "version": "1.0.0",
   "description": "AstroMedia : Une plateforme de marketing génératif intelligent où des agents IA collaborent pour créer, gérer et analyser des campagnes de contenu.",
   "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/react": "^15.0.2",
+    "@testing-library/react": "^14.2.0",
     "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^25.0.3",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
     "jsdom": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.2.0",
     "vitest": "^1.5.0"
   },
   "dependencies": {
-    "@google/genai": "^1.22.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "zod": "^4.1.12"
+    "@google/genai": "*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.22.4"
   }
 }

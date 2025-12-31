@@ -1,0 +1,9 @@
+npm ERR! code ENOSPC
+npm ERR! syscall write
+npm ERR! errno -4055
+npm ERR! nospc ENOSPC: no space left on device, write
+npm ERR! nospc There appears to be insufficient space on your system to finish.
+npm ERR! nospc Clear up some disk space and try again.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     C:\Users\zakib\AppData\Local\npm-cache\_logs\2025-12-31T03_09_15_577Z-debug-0.log

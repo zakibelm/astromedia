@@ -19,6 +19,8 @@ import assetRoutes from './routes/asset.routes';
 import userRoutes from './routes/user.routes';
 import healthRoutes from './routes/health.routes';
 import webhookRoutes from './routes/webhooks.routes';
+import agentRoutes from './routes/agents.routes';
+import workflowRoutes from './routes/workflows.routes'; // Corrected import path
 
 const app = express();
 const httpServer = createServer(app);
@@ -82,11 +84,14 @@ app.use(requestLogger);
 // =====================
 // Routes
 // =====================
+
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/campaigns', campaignRoutes);
 app.use('/api/v1/assets', assetRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/agents', agentRoutes);
+app.use('/api/v1/workflows', workflowRoutes);
 app.use('/webhooks', webhookRoutes);
 
 // Metrics endpoint (Prometheus)
@@ -110,29 +115,33 @@ app.use(errorHandler);
 // =====================
 const PORT = config.port;
 
-httpServer.listen(PORT, () => {
-  logger.info({
-    port: PORT,
-    nodeEnv: config.nodeEnv,
-    corsOrigin: config.corsOrigin
-  }, `🚀 AstroMedia Backend API v2.0 running on port ${PORT}`);
-});
+if (require.main === module) {
+  httpServer.listen(PORT, () => {
+    logger.info({
+      port: PORT,
+      nodeEnv: config.nodeEnv,
+      corsOrigin: config.corsOrigin
+    }, `🚀 AstroMedia Backend API v2.0 running on port ${PORT}`);
+  });
+}
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
-  httpServer.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
+if (require.main === module) {
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM signal received: closing HTTP server');
+    httpServer.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT signal received: closing HTTP server');
-  httpServer.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
+  process.on('SIGINT', () => {
+    logger.info('SIGINT signal received: closing HTTP server');
+    httpServer.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
   });
-});
+}
 
 export default app;
