@@ -1,0 +1,320 @@
+// Prisma Schema for AstroMedia v2.0
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================
+// USER & AUTH
+// =====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  company       String?
+  role          UserRole  @default(USER)
+  apiQuota      Int       @default(1000) // Monthly API call quota
+  apiUsed       Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  campaigns     Campaign[]
+  apiKeys       ApiKey[]
+  usage         UsageLog[]
+
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  ENTERPRISE
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  keyHash     String   @unique
+  keyPrefix   String   // First 8 chars for display (e.g., "sk_live_abc123...")
+
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+// =====================
+// CAMPAIGNS
+// =====================
+
+model Campaign {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  status          CampaignStatus @default(DRAFT)
+  governanceMode  GovernanceMode @default(SEMI_AUTO)
+
+  // Brief data (JSON)
+  briefData       Json
+
+  // Campaign context
+  brandProfile    String
+  goals           String[]
+  targetAudience  String
+  budget          Decimal        @db.Decimal(10, 2)
+  currency        String         @default("USD")
+  timeline        String
+
+  // Workflow state
+  currentPhase    String?
+  phaseStatuses   Json           @default("{}") // Record<phaseId, PhaseStatus>
+  contextData     Json           @default("{}") // Orchestrator context
+
+  // Metrics
+  totalCost       Decimal        @db.Decimal(10, 6) @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  phases          CampaignPhase[]
+  assets          Asset[]
+  logs            CampaignLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum GovernanceMode {
+  GUIDED      // Full human validation
+  SEMI_AUTO   // Key checkpoints only
+  AUTO        // Fully automated
+}
+
+model CampaignPhase {
+  id            String       @id @default(cuid())
+  campaignId    String
+  campaign      Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  phaseId       String       // e.g., "strategy", "seo", "designer"
+  agentId       String       // Agent responsible
+  status        PhaseStatus  @default(IDLE)
+
+  inputData     Json?
+  outputData    Json?
+
+  attemptCount  Int          @default(0)
+  maxRetries    Int          @default(3)
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  latencyMs     Int?
+
+  cost          Decimal      @db.Decimal(10, 6) @default(0)
+  modelUsed     String?
+
+  errorMessage  String?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([campaignId])
+  @@index([phaseId])
+  @@index([status])
+}
+
+enum PhaseStatus {
+  IDLE
+  READY
+  RUNNING
+  WAITING_VALIDATION
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+// =====================
+// ASSETS (Images, Videos, Content)
+// =====================
+
+model Asset {
+  id            String      @id @default(cuid())
+  campaignId    String
+  campaign      Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  type          AssetType
+  category      String      // e.g., "visual_A", "visual_B", "video_narrative"
+
+  // Content
+  title         String?
+  description   String?
+  content       String?     @db.Text // For text assets
+
+  // File storage
+  fileUrl       String?     // GCS/S3 URL
+  thumbnailUrl  String?
+  mimeType      String?
+  fileSize      Int?
+
+  // Metadata
+  metadata      Json?       // Model used, prompt, etc.
+
+  // Validation
+  status        AssetStatus @default(PENDING)
+  validatedAt   DateTime?
+  validatedBy   String?     // userId
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([campaignId])
+  @@index([type])
+  @@index([status])
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  TEXT
+  CAPTION
+  HASHTAGS
+  SCRIPT
+  VOICEOVER
+}
+
+enum AssetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+// =====================
+// LOGGING & ANALYTICS
+// =====================
+
+model CampaignLog {
+  id            String   @id @default(cuid())
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  level         LogLevel @default(INFO)
+  action        String
+  message       String?  @db.Text
+
+  phaseId       String?
+  agentId       String?
+
+  metadata      Json?
+
+  timestamp     DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([timestamp])
+  @@index([level])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+model UsageLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Request info
+  endpoint      String
+  method        String
+  statusCode    Int
+
+  // LLM usage
+  provider      String?
+  model         String?
+  tokensIn      Int      @default(0)
+  tokensOut     Int      @default(0)
+  latencyMs     Int?
+
+  // Cost tracking
+  cost          Decimal  @db.Decimal(10, 6) @default(0)
+
+  // Metadata
+  userAgent     String?
+  ipAddress     String?
+
+  timestamp     DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// =====================
+// KNOWLEDGE BASE (RAG)
+// =====================
+
+model KnowledgeFile {
+  id            String   @id @default(cuid())
+  userId        String
+
+  name          String
+  fileUrl       String   // GCS storage URL
+  mimeType      String
+  fileSize      Int
+
+  // Embeddings (for future RAG implementation)
+  isProcessed   Boolean  @default(false)
+  chunkCount    Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+// =====================
+// SYSTEM METRICS
+// =====================
+
+model SystemMetric {
+  id            String   @id @default(cuid())
+
+  metricName    String
+  metricValue   Float
+  labels        Json?    // Additional dimensions
+
+  timestamp     DateTime @default(now())
+
+  @@index([metricName])
+  @@index([timestamp])
+}
