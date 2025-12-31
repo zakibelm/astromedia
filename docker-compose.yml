@@ -1,29 +1,10 @@
 # AstroMedia v2.0 - Production-Ready Stack
+# Database: Neon (Serverless PostgreSQL)
+# Queues: BullMQ (Redis-based, replaces n8n)
 version: '3.9'
 
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:16-alpine
-    container_name: astromedia-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-astromedia}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
-      POSTGRES_DB: ${POSTGRES_DB:-astromedia}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-astromedia}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - astromedia-network
-
-  # Redis for caching and queues
+  # Redis for caching and BullMQ queues
   redis:
     image: redis:7-alpine
     container_name: astromedia-redis
@@ -54,7 +35,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-astromedia}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-astromedia}
+      # Neon Database (Serverless PostgreSQL)
+      NEON_DATABASE_URL: ${NEON_DATABASE_URL:?Neon database URL required}
+      NEON_DATABASE_URL_DIRECT: ${NEON_DATABASE_URL_DIRECT:-${NEON_DATABASE_URL}}
       REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
       JWT_SECRET: ${JWT_SECRET:?JWT secret required}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
@@ -67,12 +50,14 @@ services:
       AYRSHARE_API_KEY: ${AYRSHARE_API_KEY}
       GCS_STORAGE_BUCKET: ${GCS_STORAGE_BUCKET}
 
+      # Instagram Automation
+      INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN}
+      INSTAGRAM_VERIFY_TOKEN: ${INSTAGRAM_VERIFY_TOKEN:-astromedia_verify}
+
       # Monitoring
       ENABLE_METRICS: ${ENABLE_METRICS:-true}
       ENABLE_TRACING: ${ENABLE_TRACING:-false}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -86,7 +71,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Campaign Worker (BullMQ)
+  # BullMQ Worker (Instagram, Lead Gen, etc.)
   worker:
     build:
       context: ./backend
@@ -97,7 +82,9 @@ services:
     command: npm run worker
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-astromedia}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-astromedia}
+      # Neon Database
+      NEON_DATABASE_URL: ${NEON_DATABASE_URL:?Neon database URL required}
+      NEON_DATABASE_URL_DIRECT: ${NEON_DATABASE_URL_DIRECT:-${NEON_DATABASE_URL}}
       REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
 
       # API Keys
@@ -106,10 +93,13 @@ services:
       GOOGLE_CLOUD_PROJECT_ID: ${GOOGLE_CLOUD_PROJECT_ID}
       GOOGLE_CLOUD_CREDENTIALS: ${GOOGLE_CLOUD_CREDENTIALS}
 
+      # Instagram
+      INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN}
+
       # Worker config
       QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-3}
     depends_on:
-      api:
+      redis:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -180,8 +170,6 @@ services:
       - monitoring
 
 volumes:
-  postgres_data:
-    driver: local
   redis_data:
     driver: local
   prometheus_data:

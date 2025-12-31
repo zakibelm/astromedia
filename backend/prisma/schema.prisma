@@ -5,7 +5,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("NEON_DATABASE_URL")
+  directUrl = env("NEON_DATABASE_URL_DIRECT") // For migrations
 }
 
 // =====================
@@ -317,4 +318,89 @@ model SystemMetric {
 
   @@index([metricName])
   @@index([timestamp])
+}
+
+// =====================
+// INSTAGRAM AUTOMATION
+// =====================
+
+model InstagramInteraction {
+  id              String    @id @default(cuid())
+  messageId       String    @unique @map("message_id")
+  senderId        String    @map("sender_id")
+  messageText     String?   @map("message_text") @db.Text
+  replyText       String?   @map("reply_text") @db.Text
+  sentiment       String?   // positive, neutral, negative
+  aiCost          Decimal?  @map("ai_cost") @db.Decimal(10, 6)
+  responseTimeMs  Int?      @map("response_time_ms")
+  timestamp       DateTime?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([senderId])
+  @@index([timestamp(sort: Desc)])
+  @@index([sentiment])
+  @@map("instagram_interactions")
+}
+
+model LeadProfile {
+  id                String    @id @default(cuid())
+  instagramUserId   String?   @unique @map("instagram_user_id")
+  businessName      String?   @map("business_name")
+  industry          String?
+  location          String?
+  followerCount     Int?      @map("follower_count")
+  engagementRate    Decimal?  @map("engagement_rate") @db.Decimal(5, 2)
+  lastPostDate      DateTime? @map("last_post_date") @db.Date
+  engagementScore   Int       @default(0) @map("engagement_score")
+  totalInteractions Int       @default(0) @map("total_interactions")
+  leadStatus        String    @default("new") @map("lead_status") // new, contacted, qualified, converted
+  notes             String?   @db.Text
+  discoveredAt      DateTime  @default(now()) @map("discovered_at")
+  lastInteraction   DateTime? @map("last_interaction")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([instagramUserId])
+  @@index([engagementScore(sort: Desc)])
+  @@index([leadStatus])
+  @@map("lead_profiles")
+}
+
+// =====================
+// CMO AGENT REPORTS
+// =====================
+
+model CmoReport {
+  id            String   @id @default(cuid())
+  companyName   String   @map("company_name")
+  reportData    Json     @map("report_data")
+  totalAiCost   Decimal? @map("total_ai_cost") @db.Decimal(10, 6)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt(sort: Desc)])
+  @@map("cmo_reports")
+}
+
+// =====================
+// QUEUE JOBS TRACKING (Replaces n8n)
+// =====================
+
+model QueueJob {
+  id              String    @id @default(cuid())
+  queueName       String    @map("queue_name") // instagram, lead-gen, content-scheduler
+  jobId           String    @unique @map("job_id") // BullMQ job ID
+  jobData         Json      @map("job_data")
+  status          String    @default("pending") // pending, active, completed, failed
+  progress        Int       @default(0)
+  result          Json?
+  errorMessage    String?   @map("error_message") @db.Text
+  attemptsMade    Int       @default(0) @map("attempts_made")
+  maxAttempts     Int       @default(3) @map("max_attempts")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@index([queueName])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("queue_jobs")
 }
