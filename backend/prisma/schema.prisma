@@ -324,6 +324,39 @@ model SystemMetric {
 // INSTAGRAM AUTOMATION
 // =====================
 
+// Multi-platform social media interactions
+model SocialInteraction {
+  id              String           @id @default(cuid())
+  platform        SocialPlatform   // instagram, facebook, linkedin, tiktok, twitter
+  messageId       String           @map("message_id")
+  senderId        String           @map("sender_id")
+  messageText     String?          @map("message_text") @db.Text
+  replyText       String?          @map("reply_text") @db.Text
+  sentiment       String?          // positive, neutral, negative
+  aiCost          Decimal?         @map("ai_cost") @db.Decimal(10, 6)
+  responseTimeMs  Int?             @map("response_time_ms")
+  timestamp       DateTime?
+  metadata        Json?            // Platform-specific data (e.g., type: comment/dm for TikTok)
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  @@unique([platform, messageId]) // Composite unique constraint
+  @@index([platform])
+  @@index([senderId])
+  @@index([timestamp(sort: Desc)])
+  @@index([sentiment])
+  @@index([platform, senderId]) // Query by platform+user
+  @@map("social_interactions")
+}
+
+enum SocialPlatform {
+  instagram
+  facebook
+  linkedin
+  tiktok
+  twitter
+}
+
+// Backward compatibility: Keep old table for existing data
 model InstagramInteraction {
   id              String    @id @default(cuid())
   messageId       String    @unique @map("message_id")
@@ -342,27 +375,56 @@ model InstagramInteraction {
   @@map("instagram_interactions")
 }
 
+// Multi-platform lead tracking
 model LeadProfile {
-  id                String    @id @default(cuid())
-  instagramUserId   String?   @unique @map("instagram_user_id")
-  businessName      String?   @map("business_name")
+  id                String         @id @default(cuid())
+  platformUserId    String         @unique @map("platform_user_id") // Format: "platform:userId" (e.g., "instagram:123")
+  platform          String         // instagram, facebook, linkedin, tiktok, twitter
+
+  // Legacy field for backward compatibility
+  instagramUserId   String?        @map("instagram_user_id")
+
+  // Profile data
+  username          String?
+  displayName       String?        @map("display_name")
+  businessName      String?        @map("business_name")
   industry          String?
   location          String?
-  followerCount     Int?      @map("follower_count")
-  engagementRate    Decimal?  @map("engagement_rate") @db.Decimal(5, 2)
-  lastPostDate      DateTime? @map("last_post_date") @db.Date
-  engagementScore   Int       @default(0) @map("engagement_score")
-  totalInteractions Int       @default(0) @map("total_interactions")
-  leadStatus        String    @default("new") @map("lead_status") // new, contacted, qualified, converted
-  notes             String?   @db.Text
-  discoveredAt      DateTime  @default(now()) @map("discovered_at")
-  lastInteraction   DateTime? @map("last_interaction")
-  createdAt         DateTime  @default(now()) @map("created_at")
+  followerCount     Int?           @map("follower_count")
+  engagementRate    Decimal?       @map("engagement_rate") @db.Decimal(5, 2)
+  lastPostDate      DateTime?      @map("last_post_date") @db.Date
 
+  // Engagement metrics
+  engagementScore   Int            @default(0) @map("engagement_score")
+  totalInteractions Int            @default(0) @map("total_interactions")
+  leadStatus        LeadStatus     @default(NEW) @map("lead_status")
+
+  // Additional info
+  notes             String?        @db.Text
+  tags              String[]       @default([])
+
+  // Timestamps
+  discoveredAt      DateTime       @default(now()) @map("discovered_at")
+  lastInteraction   DateTime?      @map("last_interaction")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  @@index([platformUserId])
+  @@index([platform])
   @@index([instagramUserId])
   @@index([engagementScore(sort: Desc)])
   @@index([leadStatus])
+  @@index([platform, leadStatus])
   @@map("lead_profiles")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ENGAGED
+  QUALIFIED
+  CONVERTED
+  LOST
 }
 
 // =====================
