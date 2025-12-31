@@ -1,0 +1,47 @@
+# ============================================================================
+# AstroMedia - Python AI Agents Dependencies
+# ============================================================================
+# Install with: pip install -r requirements-agents.txt
+
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# Database (Neon PostgreSQL)
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# HTTP Client (for OpenRouter API calls)
+httpx==0.26.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# JSON Processing
+orjson==3.9.12
+
+# Date & Time
+python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+
+# Code Quality
+black==24.1.1
+flake8==7.0.0
+mypy==1.8.0
+
+# Development
+ipython==8.20.0
+
+# Optional: Background Tasks (if using Celery)
+# celery==5.3.4
+# redis==5.0.1
+
+# Optional: Monitoring
+# sentry-sdk==1.40.0
+# prometheus-client==0.19.0
