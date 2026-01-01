@@ -33,7 +33,11 @@ export const galleryService = {
             }
         });
         if (!response.ok) throw new Error('Failed to fetch agents');
-        return response.json();
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new Error('Failed to parse server response as JSON');
+        }
     },
 
     async createAgent(agentData: Omit<Agent, 'id' | 'createdAt' | 'knowledgeFiles'>): Promise<Agent> {
@@ -43,13 +47,21 @@ export const galleryService = {
             body: JSON.stringify(agentData),
         });
         if (!response.ok) throw new Error('Failed to create agent');
-        return response.json();
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new Error('Failed to parse server response as JSON');
+        }
     },
 
     async getAgentById(id: string): Promise<Agent> {
         const response = await fetch(`${API_BASE_URL}/agents/${id}`);
         if (!response.ok) throw new Error('Failed to fetch agent');
-        return response.json();
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new Error('Failed to parse server response as JSON');
+        }
     },
 
     // --- WORKFLOWS ---
@@ -58,7 +70,11 @@ export const galleryService = {
             headers: { 'Content-Type': 'application/json' }
         });
         if (!response.ok) throw new Error('Failed to fetch workflows');
-        return response.json();
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new Error('Failed to parse server response as JSON');
+        }
     },
 
     async saveWorkflow(workflowData: Partial<Workflow>): Promise<Workflow> {
@@ -68,6 +84,10 @@ export const galleryService = {
             body: JSON.stringify(workflowData),
         });
         if (!response.ok) throw new Error('Failed to save workflow');
-        return response.json();
+        try {
+            return await response.json();
+        } catch (error) {
+            throw new Error('Failed to parse server response as JSON');
+        }
     }
 };
