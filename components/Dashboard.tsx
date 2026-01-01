@@ -4,6 +4,7 @@ import MainContent from './MainContent';
 import Header from './Header';
 import AIAssistantWidget from './AIAssistantWidget';
 import Gallery from './Gallery/Gallery';
+import AgentTeam from './AgentTeam/AgentTeam';
 import { NewCampaignFormData, WorkflowState, GovernanceMode, KnowledgeFile } from '../types';
 import { defaultPlaybook } from '../services/orchestration/playbook';
 import { runPlaybookParallel } from '../services/orchestration/orchestrator';
@@ -191,6 +192,8 @@ const Dashboard: React.FC = () => {
                 <main className="flex-1 overflow-hidden relative">
                     {currentView === 'gallery' ? (
                         <Gallery />
+                    ) : currentView === 'agents' ? (
+                        <AgentTeam />
                     ) : (
                         <MainContent
                             isModalOpen={isModalOpen}
