@@ -21,3 +21,14 @@ export class JSONParseError extends Error {
         this.name = 'JSONParseError';
     }
 }
+
+export class ValidationError extends Error {
+    constructor(
+        message: string,
+        public endpoint?: string,
+        public validationErrors?: unknown
+    ) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+}

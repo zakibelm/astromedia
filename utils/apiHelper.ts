@@ -1,17 +1,19 @@
-import { APIError, JSONParseError } from './errors';
+import { z } from 'zod';
+import { APIError, JSONParseError, ValidationError } from './errors';
 import { logger } from './logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
-interface FetchOptions extends RequestInit {
+interface FetchOptions<T> extends RequestInit {
     errorMessage?: string;
+    schema?: z.ZodSchema<T>;
 }
 
 export async function apiRequest<T>(
     endpoint: string,
-    options: FetchOptions = {}
+    options: FetchOptions<T> = {}
 ): Promise<T> {
-    const { errorMessage, ...fetchOptions } = options;
+    const { errorMessage, schema, ...fetchOptions } = options;
     const startTime = performance.now();
     const method = fetchOptions.method || 'GET';
 
@@ -61,8 +63,9 @@ export async function apiRequest<T>(
         duration,
     });
 
+    let data: unknown;
     try {
-        return await response.json();
+        data = await response.json();
     } catch (error) {
         const responseText = await response.text().catch(() => 'Unable to read response');
         logger.error('JSON parsing failed', {
@@ -77,4 +80,24 @@ export async function apiRequest<T>(
             error
         );
     }
+
+    if (schema) {
+        try {
+            return schema.parse(data);
+        } catch (validationError) {
+            logger.error('Response validation failed', {
+                endpoint,
+                method,
+                error: validationError,
+                dataPreview: JSON.stringify(data).substring(0, 500),
+            });
+            throw new ValidationError(
+                'Invalid API response format',
+                endpoint,
+                validationError
+            );
+        }
+    }
+
+    return data as T;
 }
