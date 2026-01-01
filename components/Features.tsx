@@ -16,7 +16,7 @@ const Features: React.FC = () => {
                         {t('features.subtitle')}
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
                     {features.map((feature, index) => (
                         <div key={index} className="bg-slate-900/50 p-8 rounded-lg border border-slate-800 flex items-start space-x-6 hover:border-amber-400/50 transition-all duration-300 transform hover:-translate-y-1">
                             <div className="flex-shrink-0 text-amber-400 mt-1">
