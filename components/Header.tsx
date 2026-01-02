@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ onStart, onOpenSettings }) => {
     <header className="h-16 px-6 bg-dark-space border-b border-astro-amber-500/10 flex justify-between items-center sticky top-0 z-50">
       <div className="flex items-center space-x-3">
         <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
-        <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Nominal Status: System Alpha</span>
+        <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Nominal Status: System Beta</span>
       </div>
 
       <div className="flex items-center space-x-4">
