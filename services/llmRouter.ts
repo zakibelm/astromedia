@@ -4,147 +4,70 @@ import { LLMConfig } from './llmCatalog';
 
 export type Criteria = "cost" | "speed" | "quality" | "balanced";
 
-// API Keys
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const HF_API_KEY = process.env.HF_API_KEY;
-const API_KEY = process.env.API_KEY || OPENROUTER_API_KEY;
-
-// Provider configurations
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-const HF_BASE_URL = 'https://api-inference.huggingface.co/models';
-const YOUR_SITE_URL = 'https://astromedia.ai';
-const YOUR_SITE_NAME = 'AstroMedia';
+// NOTE: API Keys have been moved to backend for security.
+// Use /api/v1/llm/generate endpoint.
 
 /**
- * Call OpenRouter API
+ * Call Backend LLM Proxy
  */
-async function callOpenRouter(config: LLMConfig, messages: any[], responseMimeType?: string) {
-  if (!OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY is not configured");
+async function callBackendLLM(config: LLMConfig, messages: any[], responseMimeType?: string) {
+  const token = localStorage.getItem('token'); // Assumes token is stored here
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // S'assurer qu'on n'utilise que le rôle "user" pour la compatibilité
+  // Adapter les messages pour le backend (Zod schema expects 'role' and 'content')
   const safeMessages = messages.map(msg => ({
-    role: "user", // Forcer à "user" pour éviter les erreurs
+    role: msg.role || "user",
     content: msg.content
   }));
 
-  const requestBody: any = {
-    model: config.model,
-    messages: safeMessages,
-    temperature: 0.7,
-    max_tokens: 4000
-  };
-
-  if (responseMimeType === "application/json") {
-    requestBody.response_format = { type: "json_object" };
-  }
-
-  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+  const response = await fetch('/api/v1/llm/generate', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': YOUR_SITE_URL,
-      'X-Title': YOUR_SITE_NAME
-    },
-    body: JSON.stringify(requestBody)
-  });
-
-  return response;
-}
-
-/**
- * Call Hugging Face API
- */
-async function callHuggingFace(config: LLMConfig, messages: any[]) {
-  if (!HF_API_KEY) {
-    throw new Error("HF_API_KEY is not configured");
-  }
-
-  // Convert messages to a single prompt for HF models
-  const prompt = messages.map(msg => {
-    if (msg.role === 'system') return `System: ${msg.content}`;
-    if (msg.role === 'user') return `User: ${msg.content}`;
-    return `Assistant: ${msg.content}`;
-  }).join('\n\n');
-
-  const response = await fetch(`${HF_BASE_URL}/${config.model}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${HF_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: 1000,
-        temperature: 0.7,
-        return_full_text: false
-      }
+      messages: safeMessages,
+      model: config.model,
+      criteria: "balanced", // Could pass specific criteria
+      responseMimeType
     })
   });
 
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Backend API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
   return response;
 }
 
 /**
- * Helper function to execute a single LLM call with a given configuration
+ * Execute a single LLM call via Backend
  */
 async function executeLLMCall(
   config: LLMConfig,
   messages: any[],
   responseMimeType?: string
 ): Promise<any> {
-  let response;
+  console.log(`[llmRouter] Routing to Backend (Model: ${config.model}, Provider: ${config.provider})`);
 
-  // Intelligent provider routing
-  switch (config.provider) {
-    case "openrouter":
-      console.log(`[llmRouter] Routing to OpenRouter...`);
-      response = await callOpenRouter(config, messages, responseMimeType);
-      break;
+  // For now, both OpenRouter and HF (fallbacks) are routed via the same secure endpoint
+  // The backend 'llm.routes.ts' currently supports 'model' parameter which allows OpenRouter routing.
+  // HF specific routing logic is currently deprecated in frontend for security.
 
-    case "huggingface":
-      console.log(`[llmRouter] Routing to Hugging Face...`);
-      response = await callHuggingFace(config, messages);
-      break;
+  // Si le provider est HuggingFace, on peut tenter de passer via OpenRouter si le modèle est dispo,
+  // ou avertir que c'est désactivé temporairement si le backend ne le supporte pas.
+  // Mon backend implémente OpenRouter proxy.
 
-    default:
-      throw new Error(`Unknown provider: ${config.provider}`);
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[llmRouter] ${config.provider} API Error:`, {
-      provider: config.provider,
-      model: config.model,
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText
-    });
-
-    throw new Error(`${config.provider} API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
-
+  const response = await callBackendLLM(config, messages, responseMimeType);
   const result = await response.json();
 
-  // Normalize response format based on provider
-  let normalizedResponse;
-  if (config.provider === "openrouter") {
-    normalizedResponse = result; // Already in OpenAI format
-  } else if (config.provider === "huggingface") {
-    // Convert HF format to OpenAI-like format
-    normalizedResponse = {
-      choices: [{
-        message: {
-          content: Array.isArray(result) ? result[0]?.generated_text : result.generated_text || ""
-        }
-      }]
-    };
-  }
-
-  return normalizedResponse;
+  return result; // Backend returns OpenAI-like format
 }
 
 /**
@@ -152,38 +75,35 @@ async function executeLLMCall(
  * Automatically detects provider and routes to appropriate API.
  */
 export async function runLLM(task: {
-    agent: string;
-    input: string;
-    systemInstruction?: string;
-    criteria?: Criteria;
-    responseMimeType?: "application/json" | "text/plain";
+  agent: string;
+  input: string;
+  systemInstruction?: string;
+  criteria?: Criteria;
+  responseMimeType?: "application/json" | "text/plain";
 }): Promise<{
-    response: any | null,
-    modelId: string,
-    latency: number,
-    success: boolean,
-    error?: Error
+  response: any | null,
+  modelId: string,
+  latency: number,
+  success: boolean,
+  error?: Error
 }> {
   const startTime = performance.now();
 
   const criteria = task.criteria || 'balanced';
   const config = pickBanditModel(task.agent, criteria, 0.1);
 
-  console.log(`[llmRouter] Agent "${task.agent}" (criteria: ${criteria}) → Provider: ${config.provider}, Model: "${config.model}"`);
+  console.log(`[llmRouter] Agent "${task.agent}" (criteria: ${criteria}) → Model: "${config.model}"`);
 
-  // Prepare messages for all providers
-  // Certains modèles ne supportent pas le rôle "system", on combine avec user
   const messages = [];
 
   let userContent = task.input;
   if (task.systemInstruction) {
-      // Combiner les instructions système avec le message utilisateur
-      userContent = `${task.systemInstruction}\n\nUser: ${task.input}`;
+    userContent = `${task.systemInstruction}\n\nUser: ${task.input}`;
   }
 
   messages.push({
-      role: "user",
-      content: userContent
+    role: "user",
+    content: userContent
   });
 
   try {
@@ -197,47 +117,11 @@ export async function runLLM(task: {
       success: true
     };
   } catch (error: any) {
-    console.error(`[llmRouter] ${config.provider} API call failed:`, error.message);
+    console.error(`[llmRouter] Backend/API call failed:`, error.message);
 
-    // Implement fallback strategy
-    // Try alternative models if the primary one fails
-    const fallbackModels = [
-      "mistralai/mistral-7b-instruct:free",
-      "google/gemma-2-9b-it:free",
-      "meta-llama/llama-3-8b-instruct:free"
-    ];
+    // Fallback logic could be implemented here by requesting a different model from backend
+    // For now, we return error to let Orchestrator handle constraints
 
-    // Only try fallbacks if we haven't already used them as primary
-    for (const fallbackModel of fallbackModels) {
-      if (config.model === fallbackModel) {
-        continue; // Skip if this was the primary model that failed
-      }
-
-      try {
-        console.warn(`[llmRouter] Trying fallback model: ${fallbackModel}`);
-        const fallbackConfig: LLMConfig = {
-          ...config,
-          model: fallbackModel,
-          provider: "openrouter" // Fallback models are on OpenRouter
-        };
-
-        const normalizedResponse = await executeLLMCall(fallbackConfig, messages, task.responseMimeType);
-        const endTime = performance.now();
-
-        console.log(`[llmRouter] Fallback successful with model: ${fallbackModel}`);
-        return {
-          response: normalizedResponse,
-          modelId: fallbackModel,
-          latency: endTime - startTime,
-          success: true
-        };
-      } catch (fallbackError: any) {
-        console.warn(`[llmRouter] Fallback model ${fallbackModel} also failed:`, fallbackError.message);
-        // Continue to next fallback
-      }
-    }
-
-    // All fallbacks failed, return error
     const endTime = performance.now();
     return {
       response: null,
@@ -248,3 +132,4 @@ export async function runLLM(task: {
     };
   }
 }
+

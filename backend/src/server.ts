@@ -20,7 +20,8 @@ import userRoutes from './routes/user.routes';
 import healthRoutes from './routes/health.routes';
 import webhookRoutes from './routes/webhooks.routes';
 import agentRoutes from './routes/agents.routes';
-import workflowRoutes from './routes/workflows.routes'; // Corrected import path
+import workflowRoutes from './routes/workflows.routes';
+import llmRoutes from './routes/llm.routes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -92,6 +93,7 @@ app.use('/api/v1/assets', assetRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/agents', agentRoutes);
 app.use('/api/v1/workflows', workflowRoutes);
+app.use('/api/v1/llm', llmRoutes);
 app.use('/webhooks', webhookRoutes);
 
 // Metrics endpoint (Prometheus)
