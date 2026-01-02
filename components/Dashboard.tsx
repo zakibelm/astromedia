@@ -190,7 +190,10 @@ const Dashboard: React.FC = () => {
                 */}
                 <Header
                     onStart={handleNewCampaignRequest}
-                    onOpenSettings={() => setCurrentView('settings')}
+                    onOpenSettings={() => {
+                        console.log('Dashboard received onOpenSettings, switching view to settings');
+                        setCurrentView('settings');
+                    }}
                 />
 
                 <main className="flex-1 overflow-hidden relative">

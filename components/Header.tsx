@@ -28,7 +28,10 @@ const Header: React.FC<HeaderProps> = ({ onStart, onOpenSettings }) => {
         </button>
 
         <button
-          onClick={onOpenSettings}
+          onClick={() => {
+            console.log('Settings button clicked');
+            onOpenSettings();
+          }}
           className="p-2 text-gray-400 hover:text-astro-cyan-400 hover:bg-astro-cyan-500/10 rounded-full transition-colors"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
