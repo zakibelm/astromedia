@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Dashboard from './components/Dashboard';
 import LandingPage from './components/LandingPage';
@@ -7,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { TranslationProvider } from './i18n/TranslationContext';
 
 const App: React.FC = () => {
+  console.log('App: Component Rendering');
   const [view, setView] = useState<'landing' | 'login' | 'dashboard'>('landing');
 
   const handleStart = () => {

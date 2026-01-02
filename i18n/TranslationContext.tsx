@@ -19,22 +19,23 @@ const translationsData = {
 };
 
 const getInitialLanguage = (): Language => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-        const storedLang = window.localStorage.getItem('language') as Language;
-        if (storedLang && ['fr', 'en'].includes(storedLang)) {
-            return storedLang;
-        }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const storedLang = window.localStorage.getItem('language') as Language;
+    if (storedLang && ['fr', 'en'].includes(storedLang)) {
+      return storedLang;
     }
-    if (typeof window !== 'undefined' && window.navigator) {
-        const browserLang = navigator.language.split('-')[0];
-        if (browserLang === 'en') {
-            return 'en';
-        }
+  }
+  if (typeof window !== 'undefined' && window.navigator) {
+    const browserLang = navigator.language.split('-')[0];
+    if (browserLang === 'en') {
+      return 'en';
     }
-    return 'fr'; // Défaut sur le français
+  }
+  return 'fr'; // Défaut sur le français
 };
 
 export const TranslationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  console.log('TranslationProvider: Rendering');
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
 
   const setLanguage = (lang: Language) => {

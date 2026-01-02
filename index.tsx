@@ -13,6 +13,9 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <div style={{ padding: 10, border: '1px solid red' }}>
+      <h1>System Status: Online</h1>
+      <App />
+    </div>
   </React.StrictMode>
 );

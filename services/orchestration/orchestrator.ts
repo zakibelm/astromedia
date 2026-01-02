@@ -8,20 +8,20 @@ import { defaultPlaybook } from "./playbook";
 // --- Observability Logger (Phase 2) ---
 
 export type PhaseEvent = {
-    phaseId: string;
-    status: PhaseStatus;
-    latency?: number;
-    error?: string;
-    timestamp: number;
-    payload?: any; // NEW: To store agent outputs
+  phaseId: string;
+  status: PhaseStatus;
+  latency?: number;
+  error?: string;
+  timestamp: number;
+  payload?: any; // NEW: To store agent outputs
 };
 
 export interface CampaignMetrics {
-    totalPhases: number;
-    completed: number;
-    failed: number;
-    avgLatency: number;
-    totalDuration: number;
+  totalPhases: number;
+  completed: number;
+  failed: number;
+  avgLatency: number;
+  totalDuration: number;
 }
 
 
@@ -30,7 +30,7 @@ class CampaignLogger {
   private logs: Map<string, PhaseEvent[]> = new Map();
   private readonly MAX_CAMPAIGNS = 50; // Limite pour éviter les fuites de mémoire
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): CampaignLogger {
     if (!CampaignLogger.instance) {
@@ -41,7 +41,7 @@ class CampaignLogger {
 
   public logPhase(campaignId: string, event: Omit<PhaseEvent, 'timestamp'>) {
     const logEntry: PhaseEvent = { ...event, timestamp: Date.now() };
-    
+
     if (!this.logs.has(campaignId)) {
       if (this.logs.size >= this.MAX_CAMPAIGNS) {
         const oldestKey = this.logs.keys().next().value;
@@ -51,8 +51,8 @@ class CampaignLogger {
       this.logs.set(campaignId, []);
     }
     this.logs.get(campaignId)?.push(logEntry);
-    
-    if (process.env.NODE_ENV === 'development') {
+
+    if (import.meta.env.DEV) {
       console.log(`[Logger][${campaignId}] Phase: ${logEntry.phaseId}, Status: ${logEntry.status}${logEntry.latency ? `, Latency: ${logEntry.latency.toFixed(0)}ms` : ''}`);
       if (logEntry.error) {
         console.error(`[Logger][${campaignId}] Error in ${logEntry.phaseId}:`, logEntry.error);
@@ -65,25 +65,25 @@ class CampaignLogger {
   }
 
   public getCampaignMetrics(campaignId: string): CampaignMetrics {
-      const timeline = this.getCampaignTimeline(campaignId);
-      if (timeline.length === 0) {
-          return { totalPhases: 0, completed: 0, failed: 0, avgLatency: 0, totalDuration: 0 };
-      }
+    const timeline = this.getCampaignTimeline(campaignId);
+    if (timeline.length === 0) {
+      return { totalPhases: 0, completed: 0, failed: 0, avgLatency: 0, totalDuration: 0 };
+    }
 
-      const completedEvents = timeline.filter(e => e.status === 'completed' && e.latency);
-      const totalLatency = completedEvents.reduce((sum, e) => sum + (e.latency || 0), 0);
-      const failedPhases = new Set(timeline.filter(e => e.status === 'failed').map(e => e.phaseId)).size;
-      const completedPhases = new Set(completedEvents.map(e => e.phaseId)).size;
-      
-      const playbookPhases = new Set(defaultPlaybook.phases.map(p => p.id)).size -1; // Exclude briefing
+    const completedEvents = timeline.filter(e => e.status === 'completed' && e.latency);
+    const totalLatency = completedEvents.reduce((sum, e) => sum + (e.latency || 0), 0);
+    const failedPhases = new Set(timeline.filter(e => e.status === 'failed').map(e => e.phaseId)).size;
+    const completedPhases = new Set(completedEvents.map(e => e.phaseId)).size;
 
-      return {
-          totalPhases: playbookPhases,
-          completed: completedPhases,
-          failed: failedPhases,
-          avgLatency: totalLatency / (completedEvents.length || 1),
-          totalDuration: timeline.length > 1 ? timeline[timeline.length - 1].timestamp - timeline[0].timestamp : 0
-      };
+    const playbookPhases = new Set(defaultPlaybook.phases.map(p => p.id)).size - 1; // Exclude briefing
+
+    return {
+      totalPhases: playbookPhases,
+      completed: completedPhases,
+      failed: failedPhases,
+      avgLatency: totalLatency / (completedEvents.length || 1),
+      totalDuration: timeline.length > 1 ? timeline[timeline.length - 1].timestamp - timeline[0].timestamp : 0
+    };
   }
 }
 
@@ -145,12 +145,12 @@ function hasInputs(phase: Phase, ctx: Record<string, any>) {
 function depsCompleted(phase: Phase, statusByPhase: Record<string, PhaseStatus>) {
   if (!phase.dependsOn || phase.dependsOn.length === 0) return true;
   const result = phase.dependsOn.every((id) => statusByPhase[id] === "completed");
-  
+
   if (!result) {
-    console.log(`[Orchestrator] Phase "${phase.id}" waiting for dependencies:`, 
+    console.log(`[Orchestrator] Phase "${phase.id}" waiting for dependencies:`,
       phase.dependsOn.map(dep => `${dep}: ${statusByPhase[dep] || 'undefined'}`).join(', '));
   }
-  
+
   return result;
 }
 
@@ -216,9 +216,9 @@ export function runPlaybookParallel({
   const run = async () => {
     const briefingPhase = phases.find(p => p.id === 'briefing');
     if (briefingPhase && state.statusByPhase['briefing'] !== 'completed') {
-        state.statusByPhase['briefing'] = 'completed';
-        events?.onPhaseStatus?.('briefing', 'completed');
-        logger.logPhase(campaignId, { phaseId: 'briefing', status: 'completed' });
+      state.statusByPhase['briefing'] = 'completed';
+      events?.onPhaseStatus?.('briefing', 'completed');
+      logger.logPhase(campaignId, { phaseId: 'briefing', status: 'completed' });
     }
 
     for (const ph of phases) {
@@ -232,14 +232,14 @@ export function runPlaybookParallel({
     let loopCount = 0;
     while (!shouldStop) {
       const runningCount = phases.filter(p => state.statusByPhase[p.id] === 'running').length;
-      
+
       // Log périodique de l'état du workflow
       if (loopCount % 10 === 0) {
         const statusSummary = phases.map(p => `${p.id}: ${state.statusByPhase[p.id] || 'undefined'}`).join(', ');
         console.log(`[Orchestrator] Workflow status check #${loopCount}: ${statusSummary}`);
       }
       loopCount++;
-      
+
       const nextBatch = phases
         .filter((p) => state.statusByPhase[p.id] === "ready")
         .slice(0, concurrency - runningCount);
@@ -250,12 +250,12 @@ export function runPlaybookParallel({
           events?.onAllDone?.(state);
           return; // End of the loop
         }
-        await new Promise((r) => setTimeout(r, 150)); 
+        await new Promise((r) => setTimeout(r, 150));
         continue;
       }
 
       await Promise.allSettled(nextBatch.map(async (phase) => {
-        if(shouldStop) return;
+        if (shouldStop) return;
 
         state.statusByPhase[phase.id] = "running";
         events?.onPhaseStatus?.(phase.id, "running");
@@ -266,8 +266,8 @@ export function runPlaybookParallel({
         state.triesByPhase[phase.id] = tries;
 
         try {
-          if(phase.agent === "Human") return;
-          
+          if (phase.agent === "Human") return;
+
           const output = await withTimeout(
             runAgent(phase.agent, { context: state.context, mode: state.mode }),
             phase.timeoutMs ?? 60000
@@ -315,7 +315,7 @@ export function runPlaybookParallel({
           }
 
           console.log(`[Orchestrator] Context keys after ${phase.id}:`, Object.keys(state.context));
-          
+
           if (needsHumanValidation(phase, state.mode)) {
             state.statusByPhase[phase.id] = "waitingValidation";
             state.awaitingHumanApproval.add(phase.id);
@@ -343,7 +343,7 @@ export function runPlaybookParallel({
       }));
     }
   };
-  
+
   const promise = run();
 
   return {

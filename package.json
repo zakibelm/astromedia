@@ -1,16 +1,24 @@
 {
   "name": "astromedia",
-  "version": "1.0.0",
-  "description": "AstroMedia : Une plateforme de marketing génératif intelligent où des agents IA collaborent pour créer, gérer et analyser des campagnes de contenu.",
+  "version": "2.0.0",
+  "description": "AstroMedia: An intelligent generative marketing platform where AI agents collaborate to create, manage and analyze content campaigns.",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.42.0",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.0",
     "@testing-library/user-event": "^14.5.2",
@@ -19,14 +27,27 @@
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
     "jsdom": "^24.0.0",
+    "prettier": "^3.2.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
     "vitest": "^4.0.16"
   },
   "dependencies": {
     "@google/genai": "*",
+    "@tanstack/react-query": "^5.28.0",
+    "immer": "^10.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zustand": "^4.5.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   }
 }

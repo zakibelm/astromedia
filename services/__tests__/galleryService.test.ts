@@ -63,13 +63,22 @@ describe('galleryService with EVV', () => {
 
     describe('Cache & Clear', () => {
         it('should call clearCache on update', async () => {
+            // Mock the request to resolve successfully so the function completes
+            vi.mocked(evvApiClient.request).mockResolvedValue({ 
+                id: '123', 
+                name: 'New Name',
+                role: 'CMO',
+                model: 'gpt-4',
+                systemPrompt: 'Test',
+                ragEnabled: false,
+                knowledgeFiles: [],
+                createdAt: '2024-01-01T00:00:00Z'
+            });
+            
             await galleryService.updateAgent('123', { name: 'New Name' });
 
             expect(evvApiClient.clearCache).toHaveBeenCalledWith('agents:all');
             expect(evvApiClient.clearCache).toHaveBeenCalledWith('agents:123');
         });
-
-        // Removed specific cache integration test (should be in client tests)
-        // because we are now mocking the client interaction
     });
 });

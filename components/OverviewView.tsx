@@ -12,7 +12,7 @@ const OverviewView: React.FC<{ onCreateCampaign: () => void }> = ({ onCreateCamp
     ];
 
     return (
-        <div className="p-8 h-full overflow-y-auto animate-fade-in bg-gradient-to-br from-dark-space to-dark-space-mid">
+        <div className="p-8 h-full overflow-y-auto bg-gradient-to-br from-dark-space to-dark-space-mid">
             {/* Header Section */}
             <div className="flex justify-between items-end mb-10">
                 <div>
