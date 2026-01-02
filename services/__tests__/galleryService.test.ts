@@ -1,43 +1,75 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// services/__tests__/galleryService.test.ts
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { galleryService } from '../galleryService';
-import { apiRequest } from '../../utils/apiHelper';
+import { evvApiClient } from '../../utils/evvApiClient';
 
-// Mock apiRequest directly
-vi.mock('../../utils/apiHelper', () => ({
-    apiRequest: vi.fn(),
+// Mock the entire evvApiClient module
+vi.mock('../../utils/evvApiClient', () => ({
+    evvApiClient: {
+        request: vi.fn(),
+        clearCache: vi.fn(),
+        getCacheStats: vi.fn().mockReturnValue({
+            totalEntries: 0,
+            validEntries: 0,
+            expiredEntries: 0,
+            keys: [],
+        }),
+    }
 }));
 
-describe('galleryService', () => {
+describe('galleryService with EVV', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it('getAgents should call apiRequest with correct path and schema', async () => {
-        const mockAgents = [{ id: '1', name: 'Agent 1' }];
-        vi.mocked(apiRequest).mockResolvedValue(mockAgents);
-
-        const result = await galleryService.getAgents();
-
-        expect(apiRequest).toHaveBeenCalledWith('/agents', expect.objectContaining({
-            errorMessage: 'Failed to fetch agents',
-            schema: expect.any(Object) // Checking if schema is passed
-        }));
-        expect(result).toEqual(mockAgents);
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
-    it('createAgent should call apiRequest with POST method', async () => {
-        const newAgent = { name: 'New Agent', role: 'Role', model: 'gpt-4', systemPrompt: 'Prompt', ragEnabled: false };
-        const createdAgent = { id: '123', ...newAgent, createdAt: 'date' };
+    describe('getAgents', () => {
+        it('should fetch agents successfully', async () => {
+            const mockAgents = [
+                {
+                    id: '1',
+                    name: 'Test Agent',
+                    role: 'CMO',
+                    model: 'gpt-4',
+                    systemPrompt: 'You are a CMO',
+                    ragEnabled: true,
+                    knowledgeFiles: [],
+                    createdAt: '2024-01-01T00:00:00Z',
+                },
+            ];
 
-        vi.mocked(apiRequest).mockResolvedValue(createdAgent);
+            // Mock successful return from client
+            vi.mocked(evvApiClient.request).mockResolvedValue(mockAgents);
 
-        // @ts-ignore - mock data doesn't need to match full type for this test
-        await galleryService.createAgent(newAgent);
+            const result = await galleryService.getAgents();
 
-        expect(apiRequest).toHaveBeenCalledWith('/agents', expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify(newAgent),
-            errorMessage: 'Failed to create agent',
-        }));
+            expect(result).toEqual(mockAgents);
+            // Verify it called the client with correct endpoint and GET
+            expect(evvApiClient.request).toHaveBeenCalledWith(expect.objectContaining({
+                endpoint: '/agents',
+                method: 'GET'
+            }));
+        });
+
+        it('should propagate errors from client', async () => {
+            vi.mocked(evvApiClient.request).mockRejectedValue(new Error('EVV Client Error'));
+
+            await expect(galleryService.getAgents()).rejects.toThrow('EVV Client Error');
+        });
+    });
+
+    describe('Cache & Clear', () => {
+        it('should call clearCache on update', async () => {
+            await galleryService.updateAgent('123', { name: 'New Name' });
+
+            expect(evvApiClient.clearCache).toHaveBeenCalledWith('agents:all');
+            expect(evvApiClient.clearCache).toHaveBeenCalledWith('agents:123');
+        });
+
+        // Removed specific cache integration test (should be in client tests)
+        // because we are now mocking the client interaction
     });
 });

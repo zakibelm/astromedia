@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Gallery Service EVV</title>
+</head>
+<body>
+    <h1>Test Gallery Service avec EVV</h1>
+    
+    <button onclick="testGetAgents()">Test GET Agents</button>
+    <button onclick="testGetAgentsCache()">Test Cache (GET Agents x2)</button>
+    <button onclick="testCreateAgent()">Test CREATE Agent</button>
+    <button onclick="testInvalidData()">Test Invalid Data</button>
+    <button onclick="testCacheStats()">Get Cache Stats</button>
+    <button onclick="clearCache()">Clear Cache</button>
+    
+    <pre id="output" style="background: #f4f4f4; padding: 20px; margin-top: 20px;"></pre>
+
+    <script type="module">
+        import { galleryService } from './services/galleryService.ts';
+        
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.textContent += message + '\n';
+            console.log(message);
+        }
+        
+        window.testGetAgents = async () => {
+            output.textContent = '';
+            log('=== Test GET Agents ===');
+            try {
+                const agents = await galleryService.getAgents();
+                log(`✓ Success! Received ${agents.length} agents`);
+                log(JSON.stringify(agents, null, 2));
+            } catch (error) {
+                log(`✗ Error: ${error.message}`);
+                log(JSON.stringify(error, null, 2));
+            }
+        };
+        
+        window.testGetAgentsCache = async () => {
+            output.textContent = '';
+            log('=== Test Cache (2x GET Agents) ===');
+            
+            log('\n--- First call ---');
+            const start1 = Date.now();
+            await galleryService.getAgents();
+            log(`Time: ${Date.now() - start1}ms`);
+            
+            log('\n--- Second call (should use cache) ---');
+            const start2 = Date.now();
+            await galleryService.getAgents();
+            log(`Time: ${Date.now() - start2}ms (should be ~0ms)`);
+        };
+        
+        window.testCreateAgent = async () => {
+            output.textContent = '';
+            log('=== Test CREATE Agent ===');
+            try {
+                const newAgent = await galleryService.createAgent({
+                    name: 'Test Agent',
+                    role: 'Tester',
+                    model: 'gpt-4',
+                    systemPrompt: 'You are a test agent',
+                    ragEnabled: false,
+                });
+                log('✓ Agent created successfully!');
+                log(JSON.stringify(newAgent, null, 2));
+            } catch (error) {
+                log(`✗ Error: ${error.message}`);
+            }
+        };
+        
+        window.testInvalidData = async () => {
+            output.textContent = '';
+            log('=== Test Invalid Data Handling ===');
+            // Cette fonction testera comment le service gère des données invalides
+            log('Check browser console for detailed validation errors');
+            // Note: Since we don't control the API response here easily, this is just a placeholder
+            // in a real scenario we'd mock the API or have an endpoint returning bad data
+        };
+        
+        window.testCacheStats = () => {
+            output.textContent = '';
+            log('=== Cache Statistics ===');
+            const stats = galleryService.getCacheStats();
+            log(JSON.stringify(stats, null, 2));
+        };
+        
+        window.clearCache = () => {
+            output.textContent = '';
+            log('=== Clearing Cache ===');
+            galleryService.clearAllCache();
+            log('✓ Cache cleared!');
+        };
+    </script>
+</body>
+</html>
