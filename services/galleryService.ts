@@ -47,9 +47,9 @@ export const galleryService = {
      * Récupère tous les agents
      */
     async getAgents(): Promise<Agent[]> {
-        return evvApiClient.request({
+        return evvApiClient.request<Agent[]>({
             endpoint: '/agents',
-            schema: z.array(AgentSchema),
+            schema: z.array(AgentSchema) as unknown as z.ZodSchema<Agent[]>,
             method: 'GET',
             cacheKey: 'agents:all',
             cacheTTL: 3 * 60 * 1000, // 3 minutes
@@ -64,9 +64,9 @@ export const galleryService = {
         // Invalide le cache
         evvApiClient.clearCache('agents:all');
 
-        return evvApiClient.request({
+        return evvApiClient.request<Agent>({
             endpoint: '/agents',
-            schema: AgentSchema,
+            schema: AgentSchema as unknown as z.ZodSchema<Agent>,
             method: 'POST',
             body: agentData,
             maxRetries: 1, // Pas de retry pour les POST (évite duplication)
@@ -77,9 +77,9 @@ export const galleryService = {
      * Récupère un agent par ID
      */
     async getAgentById(id: string): Promise<Agent> {
-        return evvApiClient.request({
+        return evvApiClient.request<Agent>({
             endpoint: `/agents/${id}`,
-            schema: AgentSchema,
+            schema: AgentSchema as unknown as z.ZodSchema<Agent>,
             method: 'GET',
             cacheKey: `agents:${id}`,
             cacheTTL: 5 * 60 * 1000, // 5 minutes
@@ -95,9 +95,9 @@ export const galleryService = {
         evvApiClient.clearCache('agents:all');
         evvApiClient.clearCache(`agents:${id}`);
 
-        return evvApiClient.request({
+        return evvApiClient.request<Agent>({
             endpoint: `/agents/${id}`,
-            schema: AgentSchema,
+            schema: AgentSchema as unknown as z.ZodSchema<Agent>,
             method: 'PUT',
             body: agentData,
             maxRetries: 1,
@@ -128,9 +128,9 @@ export const galleryService = {
      * Récupère tous les workflows
      */
     async getWorkflows(): Promise<Workflow[]> {
-        return evvApiClient.request({
+        return evvApiClient.request<Workflow[]>({
             endpoint: '/workflows',
-            schema: z.array(WorkflowSchema),
+            schema: z.array(WorkflowSchema) as unknown as z.ZodSchema<Workflow[]>,
             method: 'GET',
             cacheKey: 'workflows:all',
             cacheTTL: 3 * 60 * 1000, // 3 minutes
@@ -145,9 +145,9 @@ export const galleryService = {
         // Invalide le cache
         evvApiClient.clearCache('workflows:all');
 
-        return evvApiClient.request({
+        return evvApiClient.request<Workflow>({
             endpoint: '/workflows',
-            schema: WorkflowSchema,
+            schema: WorkflowSchema as unknown as z.ZodSchema<Workflow>,
             method: 'POST',
             body: workflowData,
             maxRetries: 1,
@@ -158,9 +158,9 @@ export const galleryService = {
      * Récupère un workflow par ID
      */
     async getWorkflowById(id: string): Promise<Workflow> {
-        return evvApiClient.request({
+        return evvApiClient.request<Workflow>({
             endpoint: `/workflows/${id}`,
-            schema: WorkflowSchema,
+            schema: WorkflowSchema as unknown as z.ZodSchema<Workflow>,
             method: 'GET',
             cacheKey: `workflows:${id}`,
             cacheTTL: 5 * 60 * 1000,
@@ -176,9 +176,9 @@ export const galleryService = {
         evvApiClient.clearCache('workflows:all');
         evvApiClient.clearCache(`workflows:${id}`);
 
-        return evvApiClient.request({
+        return evvApiClient.request<Workflow>({
             endpoint: `/workflows/${id}`,
-            schema: WorkflowSchema,
+            schema: WorkflowSchema as unknown as z.ZodSchema<Workflow>,
             method: 'PUT',
             body: workflowData,
             maxRetries: 1,
