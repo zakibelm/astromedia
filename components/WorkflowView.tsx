@@ -13,9 +13,9 @@ import { CMOOutputSchema, MarketAnalystOutputSchema, DesignerOutputSchema, Video
 
 const MarketAnalystPayload: React.FC<{ payload: any }> = ({ payload }) => {
     const { t } = useTranslation();
-    
+
     console.log('[MarketAnalystPayload] Received payload:', payload);
-    
+
     // Gestion des différents formats de payload
     if (!payload) {
         return (
@@ -24,16 +24,16 @@ const MarketAnalystPayload: React.FC<{ payload: any }> = ({ payload }) => {
             </div>
         );
     }
-    
+
     // Si c'est juste un objet générique, affichons le contenu
     if (!payload.slides && typeof payload === 'object') {
         return (
-            <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                <h4 className="font-bold text-amber-400 mb-3">Analyse de Marché (Format Générique)</h4>
+            <div className="p-4 bg-dark-space-mid border border-astro-amber-500/10 rounded-lg">
+                <h4 className="font-bold text-astro-amber-400 mb-3">Analyse de Marché (Format Générique)</h4>
                 <div className="space-y-2 text-sm">
                     {Object.entries(payload).map(([key, value], index) => (
                         <div key={index} className="flex">
-                            <span className="font-semibold text-slate-400 mr-2 min-w-[120px]">{key}:</span>
+                            <span className="font-semibold text-gray-400 mr-2 min-w-[120px]">{key}:</span>
                             <span className="text-gray-300">
                                 {typeof value === 'string' ? value : JSON.stringify(value)}
                             </span>
@@ -43,7 +43,7 @@ const MarketAnalystPayload: React.FC<{ payload: any }> = ({ payload }) => {
             </div>
         );
     }
-    
+
     // Vérifier que payload.slides existe
     if (!Array.isArray(payload.slides)) {
         return (
@@ -56,7 +56,7 @@ const MarketAnalystPayload: React.FC<{ payload: any }> = ({ payload }) => {
             </div>
         );
     }
-    
+
     return (
         <div className="space-y-4">
             {payload.slides.map((slide, index) => {
@@ -68,7 +68,7 @@ const MarketAnalystPayload: React.FC<{ payload: any }> = ({ payload }) => {
                         </div>
                     );
                 }
-                
+
                 return (
                     <div key={index} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                         <h4 className="font-bold text-amber-400 mb-2">
@@ -145,10 +145,10 @@ const ScriptwriterPayload: React.FC<{ payload: z.infer<typeof ScriptwriterOutput
     return (
         <div className="space-y-4">
             {briefs.map((brief, index) => (
-                <div key={index} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                    <h4 className="font-bold text-amber-400 mb-2">{t('workflow.scenario.title', { platform: brief.platform, format: brief.format })}: <span className="text-white font-normal">{brief.title}</span></h4>
+                <div key={index} className="p-4 bg-dark-space-mid border border-astro-amber-500/10 rounded-lg">
+                    <h4 className="font-bold text-astro-amber-400 mb-2">{t('workflow.scenario.title', { platform: brief.platform, format: brief.format })}: <span className="text-white font-normal">{brief.title}</span></h4>
                     <div className="space-y-2 text-sm">
-                        <p><strong className="text-slate-400">{t('workflow.scenario.hook')}:</strong> {brief.scenario.hook}</p>
+                        <p><strong className="text-gray-400">{t('workflow.scenario.hook')}:</strong> {brief.scenario.hook}</p>
                         <div>
                             <strong className="text-slate-400">{t('workflow.scenario.scenes')}:</strong>
                             <ul className="list-disc list-inside ml-4">{brief.scenario.scenes.map((scene, i) => <li key={i}>{scene}</li>)}</ul>
@@ -165,7 +165,7 @@ const ScriptwriterPayload: React.FC<{ payload: z.infer<typeof ScriptwriterOutput
 const VisualsChoice: React.FC<{ payload: any, onApprove: (data: any) => void, onReject: (reason: string) => void }> = ({ payload, onApprove, onReject }) => {
     const { t } = useTranslation();
     const [feedback, setFeedback] = useState('');
-    
+
     return (
         <div className="space-y-4">
             <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -178,24 +178,24 @@ const VisualsChoice: React.FC<{ payload: any, onApprove: (data: any) => void, on
                     <div key={key}>
                         <h4 className="font-semibold text-center mb-2">{payload[key].modelName} ({key === 'artistic' ? t('workflow.visuals.versionA') : t('workflow.visuals.versionB')})</h4>
                         <img src={`data:image/jpeg;base64,${payload[key].imageBase64}`} alt={`${key} visual`} className="rounded-lg w-full" />
-                        <button 
+                        <button
                             onClick={() => onApprove({ validatedVisual: payload[key] })}
                             className="w-full mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors"
                         >
-                           {t(key === 'artistic' ? 'workflow.actions.validateA' : 'workflow.actions.validateB')}
+                            {t(key === 'artistic' ? 'workflow.actions.validateA' : 'workflow.actions.validateB')}
                         </button>
                     </div>
                 ))}
             </div>
             <div className="pt-4 border-t border-slate-700">
-                <textarea 
+                <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t('workflow.actions.feedbackPlaceholder') || ''}
                     className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     rows={2}
                 />
-                <button 
+                <button
                     onClick={() => onReject(feedback)}
                     className="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md transition-colors"
                 >
@@ -214,11 +214,11 @@ const VideoChoice: React.FC<{ payload: any, onApprove: (data: any) => void, onRe
         <div className="space-y-4">
             <h3 className="text-lg font-semibold text-center">{t('workflow.video.choiceTitle')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {(['narrative', 'dynamic'] as const).map(key => (
+                {(['narrative', 'dynamic'] as const).map(key => (
                     <div key={key}>
                         <h4 className="font-semibold text-center mb-2">{payload[key].modelName} ({key === 'narrative' ? t('workflow.video.versionA') : t('workflow.video.versionB')})</h4>
                         <video src={`data:video/mp4;base64,${payload[key].videoBase64}`} controls className="rounded-lg w-full" />
-                        <button 
+                        <button
                             onClick={() => onApprove({ validatedVideo: payload[key] })}
                             className="w-full mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors"
                         >
@@ -227,15 +227,15 @@ const VideoChoice: React.FC<{ payload: any, onApprove: (data: any) => void, onRe
                     </div>
                 ))}
             </div>
-             <div className="pt-4 border-t border-slate-700">
-                <textarea 
+            <div className="pt-4 border-t border-slate-700">
+                <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder={t('workflow.actions.feedbackPlaceholder') || ''}
                     className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     rows={2}
                 />
-                <button 
+                <button
                     onClick={() => onReject(feedback)}
                     className="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md transition-colors"
                 >
@@ -271,7 +271,7 @@ const PayloadRenderer: React.FC<{ phaseId: string; payload: any; onApprove: (dat
     const agentName = defaultPlaybook.phases.find(p => p.id === phaseId)?.agent || 'Unknown';
 
     if (!payload) return null;
-    
+
     // Protection contre les objets non valides
     try {
         // Vérifier si le payload peut être sérialisé (test de validité)
@@ -287,7 +287,7 @@ const PayloadRenderer: React.FC<{ phaseId: string; payload: any; onApprove: (dat
     }
 
     let content: React.ReactNode;
-    
+
     try {
         switch (phaseId) {
             case 'research':
@@ -330,7 +330,7 @@ const PayloadRenderer: React.FC<{ phaseId: string; payload: any; onApprove: (dat
             </div>
         );
     }
-    
+
     return (
         <div className="mt-4 space-y-4">
             <h3 className="font-semibold text-slate-300">{t('workflow.results.title', { agent: agentName })}</h3>
@@ -352,13 +352,13 @@ const PhaseCard: React.FC<{
     if (!phaseConfig) return null;
 
     const statusStyles = {
-        completed: { text: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-        running: { text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
-        inprogress: { text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' }, // Alias for running
-        waitingValidation: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+        completed: { text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
+        running: { text: 'text-astro-amber-400', bg: 'bg-astro-amber-500/10', border: 'border-astro-amber-500/30' },
+        inprogress: { text: 'text-astro-amber-400', bg: 'bg-astro-amber-500/10', border: 'border-astro-amber-500/30' }, // Alias for running
+        waitingValidation: { text: 'text-astro-cyan-400', bg: 'bg-astro-cyan-500/10', border: 'border-astro-cyan-500/30' },
         failed: { text: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' },
-        pending: { text: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
-        skipped: { text: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
+        pending: { text: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' },
+        skipped: { text: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20' },
     };
     const styles = statusStyles[status as keyof typeof statusStyles] || statusStyles.pending;
     const isWaitingForChoice = (phaseId === 'visuals' || phaseId === 'video') && status === 'waitingValidation';
@@ -376,12 +376,12 @@ const PhaseCard: React.FC<{
                 </div>
             </div>
             {event?.error && <div className="mt-2 p-2 bg-red-900/50 border border-red-500/30 rounded-md text-red-300 text-xs">{event.error}</div>}
-            
+
             {event?.payload && <PayloadRenderer phaseId={phaseId} payload={event.payload} onApprove={(data) => onApprove(phaseId, data)} onReject={(reason) => onReject(phaseId, reason)} />}
 
             {status === 'waitingValidation' && !isWaitingForChoice && (
-                 <div className="mt-4 pt-4 border-t border-slate-700 space-y-2">
-                    <textarea 
+                <div className="mt-4 pt-4 border-t border-slate-700 space-y-2">
+                    <textarea
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         placeholder={t('workflow.actions.feedbackPlaceholder') || ''}
@@ -399,10 +399,10 @@ const PhaseCard: React.FC<{
 };
 
 interface WorkflowViewProps {
-  workflowStatus: WorkflowState;
-  campaignId: string;
-  onApprove: (phaseId: string, data?: any) => void;
-  onReject: (phaseId: string, reason: string) => void;
+    workflowStatus: WorkflowState;
+    campaignId: string;
+    onApprove: (phaseId: string, data?: any) => void;
+    onReject: (phaseId: string, reason: string) => void;
 }
 
 const WorkflowView: React.FC<WorkflowViewProps> = ({ workflowStatus, campaignId, onApprove, onReject }) => {

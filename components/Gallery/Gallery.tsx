@@ -23,14 +23,14 @@ const Gallery: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#10051a]">
+        <div className="flex flex-col h-full bg-dark-space">
             {/* Gallery Navbar */}
-            <div className="flex items-center space-x-8 px-8 py-4 border-b border-white/5 bg-[#160e1b]">
+            <div className="flex items-center space-x-8 px-8 py-4 border-b border-astro-amber-500/10 bg-dark-space">
                 <button
                     onClick={() => handleTabChange('agents')}
                     className={`pb-2 text-sm font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'agents'
-                            ? 'text-white border-purple-500'
-                            : 'text-gray-500 border-transparent hover:text-white'
+                        ? 'text-astro-cyan-400 border-astro-cyan-400'
+                        : 'text-gray-500 border-transparent hover:text-white'
                         }`}
                 >
                     Galerie Agents AI
@@ -38,8 +38,8 @@ const Gallery: React.FC = () => {
                 <button
                     onClick={() => handleTabChange('workflows')}
                     className={`pb-2 text-sm font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'workflows'
-                            ? 'text-white border-amber-500'
-                            : 'text-gray-500 border-transparent hover:text-white'
+                        ? 'text-astro-amber-400 border-astro-amber-400'
+                        : 'text-gray-500 border-transparent hover:text-white'
                         }`}
                 >
                     Galerie Workflows

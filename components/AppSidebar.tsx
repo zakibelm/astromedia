@@ -21,7 +21,7 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
     ];
 
     return (
-        <aside className="w-64 bg-[#10051a] flex flex-col border-r border-white/5 shrink-0 h-screen font-sans">
+        <aside className="w-64 bg-dark-space flex flex-col border-r border-astro-amber-500/10 shrink-0 h-screen font-sans">
             {/* Header / Logo */}
             <div className="p-6 mb-2">
                 <div className="flex items-center space-x-3 mb-1">
@@ -39,12 +39,12 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
                             key={item.id}
                             onClick={() => setCurrentView(item.id)}
                             className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${isActive
-                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                                ? 'bg-gradient-to-r from-astro-amber-500/20 to-orange-600/20 text-astro-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] border border-astro-amber-500/20'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <svg
-                                className={`mr-3 h-5 w-5 transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-purple-400'}`}
+                                className={`mr-3 h-5 w-5 transition-colors ${isActive ? 'text-astro-amber-400' : 'text-gray-500 group-hover:text-astro-cyan-400'}`}
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -59,9 +59,9 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
             </nav>
 
             {/* User Profile Footer */}
-            <div className="p-4 border-t border-white/5">
-                <div className="flex items-center p-3 rounded-xl bg-[#1a1025] border border-white/5">
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
+            <div className="p-4 border-t border-astro-amber-500/10">
+                <div className="flex items-center p-3 rounded-xl bg-dark-space-mid border border-astro-amber-500/10">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-astro-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]">
                         JD
                     </div>
                     <div className="ml-3">
