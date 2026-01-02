@@ -1,1 +1,19 @@
-full contents of i18n/locales/en.json
+{
+    "hero": {
+        "title": "Orchestrate Your Marketing with an AI Team",
+        "subtitle": "AstroMedia combines specialized AI agents to create and execute complex marketing strategies, from conception to analysis, with unmatched speed and precision."
+    },
+    "common": {
+        "launchApp": "Launch App",
+        "login": "Login",
+        "signup": "Sign Up",
+        "email": "Email Address",
+        "password": "Password",
+        "forgotPassword": "Forgot Password?",
+        "googleLogin": "Continue with Google",
+        "dontHaveAccount": "Don't have an account?",
+        "alreadyHaveAccount": "Already have an account?",
+        "submit": "Sign In",
+        "createAccount": "Create Account"
+    }
+}

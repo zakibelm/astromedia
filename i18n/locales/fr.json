@@ -1,1 +1,19 @@
-full contents of i18n/locales/fr.json
+{
+    "hero": {
+        "title": "Orchestrez Votre Marketing avec une Équipe IA",
+        "subtitle": "AstroMedia combine des agents IA spécialisés pour créer et exécuter des stratégies marketing complexes, de la conception à l'analyse, avec une rapidité et une précision inégalées."
+    },
+    "common": {
+        "launchApp": "Lancer l'application",
+        "login": "Connexion",
+        "signup": "S'inscrire",
+        "email": "Adresse Email",
+        "password": "Mot de passe",
+        "forgotPassword": "Mot de passe oublié ?",
+        "googleLogin": "Continuer avec Google",
+        "dontHaveAccount": "Pas encore de compte ?",
+        "alreadyHaveAccount": "Déjà un compte ?",
+        "submit": "Se connecter",
+        "createAccount": "Créer un compte"
+    }
+}
