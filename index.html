@@ -1,29 +1,68 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AstroMedia</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      /* Additional styles can go here if needed */
-      @keyframes gradient-move {
-        0% {
-          background-position: 0% 50%;
-        }
-        50% {
-          background-position: 100% 50%;
-        }
-        100% {
-          background-position: 0% 50%;
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AstroMedia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-space': '#0a0510',
+            'dark-space-mid': '#120820',
+            'astro-amber': {
+              400: '#FBBF24',
+              500: '#F59E0B',
+              600: '#D97706',
+            },
+            'astro-cyan': {
+              400: '#22D3EE',
+              500: '#06B6D4',
+            },
+          },
+          animation: {
+            'fade-in-down': 'fadeInDown 0.5s ease-out',
+            'fade-in-up': 'fadeInUp 0.5s ease-out',
+          },
+          keyframes: {
+            fadeInDown: {
+              '0%': { opacity: '0', transform: 'translateY(-10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          }
         }
       }
-      .animate-gradient {
-        background-size: 200% 200%;
-        animation: gradient-move 5s ease infinite;
+    }
+  </script>
+  <style>
+    /* Additional styles can go here if needed */
+    @keyframes gradient-move {
+      0% {
+        background-position: 0% 50%;
       }
-    </style>
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradient-move 5s ease infinite;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -43,10 +82,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-[#10051a] font-sans">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="bg-[#10051a] font-sans">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

@@ -17,20 +17,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
         e.preventDefault();
         // Simulate login
         console.log('Login/Signup with:', email, password);
-        // TODO: Implement actual auth logic here (backend call)
         onLoginSuccess();
     };
 
     const handleGoogleLogin = () => {
         console.log('Google Login clicked');
-        // TODO: Implement Google Auth
         onLoginSuccess();
     };
 
     return (
-        <div className="min-h-screen bg-[#10051a] text-white flex flex-col">
-            {/* Reusing Hero Background Styles */}
-            <section className="relative flex-grow flex flex-col justify-center items-center py-20 px-4 text-center overflow-hidden bg-gradient-to-b from-[#10051a] via-[#1a0b2e] to-[#10051a]">
+        <div className="min-h-screen bg-dark-space text-white flex flex-col">
+            {/* Reusing Hero Background Styles with Warm Halo Theme */}
+            <section className="relative flex-grow flex flex-col justify-center items-center py-20 px-4 text-center overflow-hidden bg-gradient-to-b from-dark-space via-dark-space-mid to-dark-space">
 
                 {/* Navigation / Back Button */}
                 <div className="absolute top-6 left-6 z-20">
@@ -45,8 +43,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
                         <Logo />
                     </div>
 
-                    <div className="w-full bg-[#1a0b2e]/80 backdrop-blur-md p-8 rounded-2xl border border-purple-500/20 shadow-[0_0_50px_rgba(124,58,237,0.15)] animate-fade-in-up">
-                        <h2 className="text-3xl font-bold mb-6 text-center">
+                    <div className="w-full bg-dark-space-mid/80 backdrop-blur-md p-8 rounded-2xl border border-astro-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.15)] animate-fade-in-up">
+                        <h2 className="text-3xl font-bold mb-6 text-center text-white">
                             {isLogin ? t('common.login') : t('common.createAccount')}
                         </h2>
 
@@ -57,7 +55,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#0d0415] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                    className="w-full bg-[#0d0415] border border-astro-amber-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-astro-amber-500 focus:ring-1 focus:ring-astro-amber-500 transition-all"
                                     placeholder="name@company.com"
                                     required
                                 />
@@ -68,7 +66,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#0d0415] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                    className="w-full bg-[#0d0415] border border-astro-amber-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-astro-amber-500 focus:ring-1 focus:ring-astro-amber-500 transition-all"
                                     placeholder="••••••••"
                                     required
                                 />
@@ -76,7 +74,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
 
                             {isLogin && (
                                 <div className="text-right">
-                                    <a href="#" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                                    <a href="#" className="text-sm text-astro-cyan-400 hover:text-astro-cyan-300 transition-colors">
                                         {t('common.forgotPassword')}
                                     </a>
                                 </div>
@@ -84,7 +82,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
 
                             <button
                                 type="submit"
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:shadow-purple-600/30 transform hover:scale-[1.02] transition-all duration-200"
+                                className="w-full py-3 bg-gradient-to-r from-astro-amber-500 to-orange-600 text-white font-bold rounded-lg shadow-lg hover:shadow-astro-amber-500/30 transform hover:scale-[1.02] transition-all duration-200"
                             >
                                 {isLogin ? t('common.submit') : t('common.createAccount')}
                             </button>
@@ -113,7 +111,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
                             </span>
                             <button
                                 onClick={() => setIsLogin(!isLogin)}
-                                className="ml-2 text-purple-400 font-semibold hover:text-purple-300 focus:outline-none"
+                                className="ml-2 text-astro-amber-400 font-semibold hover:text-astro-amber-300 focus:outline-none"
                             >
                                 {isLogin ? t('common.signup') : t('common.login')}
                             </button>
@@ -121,10 +119,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
                     </div>
                 </div>
 
-                {/* Background Decor (Matching Hero) */}
+                {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl opacity-50 animate-pulse"></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl opacity-30"></div>
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-astro-amber-500/10 rounded-full blur-3xl opacity-50 animate-pulse"></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-astro-cyan-500/10 rounded-full blur-3xl opacity-30"></div>
                 </div>
             </section>
         </div>
