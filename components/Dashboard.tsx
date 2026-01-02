@@ -5,6 +5,7 @@ import Header from './Header';
 import AIAssistantWidget from './AIAssistantWidget';
 import Gallery from './Gallery/Gallery';
 import AgentTeam from './AgentTeam/AgentTeam';
+import SettingsView from './Settings/SettingsView';
 import { NewCampaignFormData, WorkflowState, GovernanceMode, KnowledgeFile } from '../types';
 import { defaultPlaybook } from '../services/orchestration/playbook';
 import { runPlaybookParallel } from '../services/orchestration/orchestrator';
@@ -187,13 +188,18 @@ const Dashboard: React.FC = () => {
                     Let's assume Header logic is wanted here or inside components. 
                     I'll add Header here for consistency with Layout. 
                 */}
-                <Header onStart={handleNewCampaignRequest} />
+                <Header
+                    onStart={handleNewCampaignRequest}
+                    onOpenSettings={() => setCurrentView('settings')}
+                />
 
                 <main className="flex-1 overflow-hidden relative">
                     {currentView === 'gallery' ? (
                         <Gallery />
                     ) : currentView === 'agents' ? (
                         <AgentTeam />
+                    ) : currentView === 'settings' ? (
+                        <SettingsView />
                     ) : (
                         <MainContent
                             isModalOpen={isModalOpen}
@@ -208,6 +214,7 @@ const Dashboard: React.FC = () => {
                             knowledgeFiles={knowledgeFiles}
                             onAddFile={handleAddFile}
                         />
+
                     )}
                 </main>
             </div>
