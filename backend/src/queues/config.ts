@@ -26,7 +26,7 @@ export const defaultQueueOptions: QueueOptions = {
   },
 };
 
-export const defaultWorkerOptions: Omit<WorkerOptions, 'connection'> = {
+export const defaultWorkerOptions: WorkerOptions = {
   connection,
   concurrency: 5,
   limiter: {

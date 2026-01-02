@@ -30,6 +30,8 @@ model User {
   campaigns     Campaign[]
   apiKeys       ApiKey[]
   usage         UsageLog[]
+  aiAgents      AIAgent[]
+  workflows     Workflow[]
 
   @@index([email])
 }

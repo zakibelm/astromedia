@@ -18,7 +18,7 @@ export const prisma =
   });
 
 // Log slow queries in development
-prisma.$on('query', (e: any) => {
+(prisma as any).$on('query', (e: any) => {
   if (e.duration > 1000) {
     logger.warn(
       { query: e.query, duration: e.duration, params: e.params },
@@ -27,11 +27,11 @@ prisma.$on('query', (e: any) => {
   }
 });
 
-prisma.$on('error', (e: any) => {
+(prisma as any).$on('error', (e: any) => {
   logger.error({ err: e }, 'Prisma error');
 });
 
-prisma.$on('warn', (e: any) => {
+(prisma as any).$on('warn', (e: any) => {
   logger.warn({ warning: e }, 'Prisma warning');
 });
 

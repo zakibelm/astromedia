@@ -134,7 +134,7 @@ router.get(
     }
 
     // Get job status if running
-    let jobStatus = null;
+    let jobStatus: any = null;
     if (campaign.status === 'RUNNING') {
       jobStatus = await getCampaignJobStatus(campaign.id);
     }
@@ -289,14 +289,18 @@ router.post(
       throw new AppError(404, 'Campaign not found');
     }
 
+    // Find phase first
+    const phase = await prisma.campaignPhase.findFirst({
+      where: { campaignId, phaseId }
+    });
+
+    if (!phase) {
+      throw new AppError(404, 'Phase not found');
+    }
+
     // Update phase status
     await prisma.campaignPhase.update({
-      where: {
-        campaignId_phaseId: {
-          campaignId,
-          phaseId,
-        },
-      },
+      where: { id: phase.id },
       data: {
         status: 'COMPLETED',
         completedAt: new Date(),

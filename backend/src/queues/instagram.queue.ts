@@ -6,7 +6,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { defaultQueueOptions, defaultWorkerOptions } from './config';
 import { PrismaClient } from '@prisma/client';
-import { runLLM } from '../../../services/llmRouter';
+import { runLLM } from '../services/llm/llmRouter';
 
 const prisma = new PrismaClient();
 
@@ -173,7 +173,7 @@ async function updateLeadScore(senderId: string): Promise<void> {
     // Upsert lead profile
     await prisma.leadProfile.upsert({
       where: {
-        instagramUserId: senderId,
+        platformUserId: `instagram:${senderId}`,
       },
       update: {
         totalInteractions: {
@@ -185,10 +185,11 @@ async function updateLeadScore(senderId: string): Promise<void> {
         lastInteraction: new Date(),
       },
       create: {
-        instagramUserId: senderId,
+        platformUserId: `instagram:${senderId}`,
+        platform: 'instagram',
         totalInteractions: 1,
         engagementScore: 5,
-        leadStatus: 'new',
+        leadStatus: 'NEW',
         lastInteraction: new Date(),
       },
     });

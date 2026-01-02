@@ -130,24 +130,29 @@ export const campaignWorker = new Worker<CampaignJobData>(
           logger.debug({ campaignId, phaseId, status }, 'Phase status updated');
 
           // Update in database
-          await prisma.campaignPhase.upsert({
-            where: {
-              campaignId_phaseId: {
+          // Update in database
+          const existingPhase = await prisma.campaignPhase.findFirst({
+            where: { campaignId, phaseId }
+          });
+
+          if (existingPhase) {
+            await prisma.campaignPhase.update({
+              where: { id: existingPhase.id },
+              data: {
+                status: status.toUpperCase() as any,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            await prisma.campaignPhase.create({
+              data: {
                 campaignId,
                 phaseId,
+                agentId: 'system',
+                status: status.toUpperCase() as any,
               },
-            },
-            update: {
-              status: status.toUpperCase() as any,
-              updatedAt: new Date(),
-            },
-            create: {
-              campaignId,
-              phaseId,
-              agentId: phaseId,
-              status: status.toUpperCase() as any,
-            },
-          });
+            });
+          }
 
           // Emit to client
           io.to(`campaign:${campaignId}`).emit('phase:status', {
@@ -170,17 +175,15 @@ export const campaignWorker = new Worker<CampaignJobData>(
           logger.info({ campaignId, phaseId }, 'Phase output received');
 
           // Store output in database
-          await prisma.campaignPhase.update({
-            where: {
-              campaignId_phaseId: {
-                campaignId,
-                phaseId,
+          const phase = await prisma.campaignPhase.findFirst({ where: { campaignId, phaseId } });
+          if (phase) {
+            await prisma.campaignPhase.update({
+              where: { id: phase.id },
+              data: {
+                outputData: output,
               },
-            },
-            data: {
-              outputData: output,
-            },
-          });
+            });
+          }
 
           // Emit to client
           io.to(`campaign:${campaignId}`).emit('phase:output', {
@@ -194,17 +197,15 @@ export const campaignWorker = new Worker<CampaignJobData>(
         onPhaseError: async (phaseId: string, error: Error) => {
           logger.error({ campaignId, phaseId, err: error }, 'Phase error');
 
-          await prisma.campaignPhase.update({
-            where: {
-              campaignId_phaseId: {
-                campaignId,
-                phaseId,
+          const phase = await prisma.campaignPhase.findFirst({ where: { campaignId, phaseId } });
+          if (phase) {
+            await prisma.campaignPhase.update({
+              where: { id: phase.id },
+              data: {
+                errorMessage: error.message,
               },
-            },
-            data: {
-              errorMessage: error.message,
-            },
-          });
+            });
+          }
 
           // Log error
           await prisma.campaignLog.create({

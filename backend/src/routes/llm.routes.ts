@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ const GenerateSchema = z.object({
  * POST /api/llm/generate
  * Secure proxy to OpenRouter/HF
  */
-router.post('/generate', authenticateToken, async (req, res) => {
+router.post('/generate', authenticate, async (req, res) => {
     try {
         const { messages, model } = GenerateSchema.parse(req.body);
 

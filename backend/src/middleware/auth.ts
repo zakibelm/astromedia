@@ -238,5 +238,5 @@ export const authenticateSocket = async (socket: Socket, next: (err?: Error) => 
 export const generateToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): string => {
   return jwt.sign(payload, config.jwtSecret, {
     expiresIn: config.jwtExpiresIn
-  });
+  } as any);
 };

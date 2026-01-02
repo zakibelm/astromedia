@@ -6,7 +6,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { defaultQueueOptions, defaultWorkerOptions } from './config';
 import { PrismaClient } from '@prisma/client';
-import { runLLM } from '../../../services/llmRouter';
+import { runLLM } from '../services/llm/llmRouter';
 
 const prisma = new PrismaClient();
 
@@ -190,7 +190,7 @@ async function updateLeadScore(senderId: string, platform: string): Promise<void
         platform,
         totalInteractions: 1,
         engagementScore: 5,
-        leadStatus: 'new',
+        leadStatus: 'NEW',
         lastInteraction: new Date(),
       },
     });

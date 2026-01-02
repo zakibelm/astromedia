@@ -285,7 +285,7 @@ router.post('/twitter', async (req, res) => {
         messageText: tweet.text,
         timestamp: new Date(tweet.created_at).toISOString(),
         platform: 'twitter' as const,
-        type: (isReply ? 'reply' : 'mention') as const,
+        type: isReply ? 'reply' : 'mention',
       };
     } else {
       return res.status(200).json({ status: 'ignored', reason: 'Not a supported event type' });
