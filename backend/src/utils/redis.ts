@@ -4,9 +4,14 @@ import { config } from '../config';
 import { logger } from './logger';
 
 export const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null, // Disable limit to prevent crash on connection retry
+  lazyConnect: true, // Don't connect immediately
   retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
+    if (times > 5) {
+      logger.warn('Redis connection retries exhausted (soft fail for dev)');
+      return null; // Stop retrying
+    }
+    const delay = Math.min(times * 200, 2000);
     return delay;
   },
   reconnectOnError(err) {
@@ -16,6 +21,11 @@ export const redis = new Redis(config.redisUrl, {
     }
     return false;
   },
+});
+
+// Attempt connection but don't crash if it fails (common in local dev)
+redis.connect().catch((err) => {
+  logger.warn('Failed to connect to Redis (continuing without it): ' + err.message);
 });
 
 redis.on('connect', () => {

@@ -10,7 +10,11 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
 const router = Router();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8000/api/v1/auth/google/callback'
+);
 
 // Validation schemas
 const registerSchema = z.object({
@@ -25,103 +29,21 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-const googleAuthSchema = z.object({
-  credential: z.string(),
-});
-
-/**
- * POST /api/v1/auth/google
- * specific Login/Signup via Google
- */
-router.post(
-  '/google',
-  authRateLimiter,
-  asyncHandler(async (req, res) => {
-    const { credential } = googleAuthSchema.parse(req.body);
-
-    // Verify Google Token
-    let ticket;
-    try {
-        ticket = await googleClient.verifyIdToken({
-            idToken: credential,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-    } catch (error) {
-        throw new AppError(401, 'Invalid Google Token');
-    }
-
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-        throw new AppError(400, 'Invalid Google Token Payload');
-    }
-
-    const { email, name, picture } = payload;
-
-    // Find or Create User
-    let user = await prisma.user.findUnique({
-        where: { email },
-    });
-
-    if (!user) {
-        // Create new user (random password since they use Google)
-        const passwordHash = await bcrypt.hash(Math.random().toString(36), 12);
-        
-        user = await prisma.user.create({
-            data: {
-                email,
-                name: name || 'Google User',
-                passwordHash,
-                // avatarUrl: picture // Add if schema supports it
-                role: 'USER', // Default role
-            }
-        });
-        logger.info({ userId: user.id, email }, 'User registered via Google');
-    } else {
-        logger.info({ userId: user.id, email }, 'User logged in via Google');
-    }
-
-    // Update last login
-    await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
-    });
-
-    // Generate JWT
-    const token = generateToken({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-    });
-
-    res.json({
-        user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            company: user.company,
-            role: user.role,
-            apiQuota: user.apiQuota,
-            apiUsed: user.apiUsed,
-        },
-        token,
-    });
-  })
-);
-
 /**
  * GET /api/v1/auth/google/login
  * Redirect to Google OAuth
  */
 router.get('/google/login', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID!,
-    redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8000/api/v1/auth/google/callback',
-    response_type: 'code',
-    scope: 'openid email profile',
+  const authorizeUrl = googleClient.generateAuthUrl({
     access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
     prompt: 'consent',
   });
-  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+
+  res.redirect(authorizeUrl);
 });
 
 /**
@@ -133,59 +55,55 @@ router.get(
   asyncHandler(async (req, res) => {
     const { code, error } = req.query;
 
+    let frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+    // Fix: Force 5173 if env var is set to old default 3001
+    if (frontendUrl.includes('3001')) {
+      frontendUrl = 'http://localhost:5173';
+    }
+
     if (error) {
       logger.error({ error }, 'Google OAuth error');
-      return res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=${error}`);
+      return res.redirect(`${frontendUrl}/login?error=${error}`);
     }
 
     if (!code || typeof code !== 'string') {
-      return res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=no_code`);
+      return res.redirect(`${frontendUrl}/login?error=no_code`);
     }
 
     try {
       // Exchange code for tokens
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code,
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8000/api/v1/auth/google/callback',
-          grant_type: 'authorization_code',
-        }),
+      const { tokens } = await googleClient.getToken(code);
+      googleClient.setCredentials(tokens);
+
+      // Verify ID Token
+      const ticket = await googleClient.verifyIdToken({
+        idToken: tokens.id_token!,
+        audience: process.env.GOOGLE_CLIENT_ID,
       });
 
-      if (!tokenResponse.ok) {
-        throw new Error('Token exchange failed');
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.email) {
+        throw new Error('Invalid Google Token Payload');
       }
 
-      const tokens = await tokenResponse.json();
-
-      // Get user info
-      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
-
-      if (!userResponse.ok) {
-        throw new Error('Failed to get user info');
-      }
-
-      const googleUser = await userResponse.json();
+      const { email, name, picture } = payload;
 
       // Find or create user
       let user = await prisma.user.findUnique({
-        where: { email: googleUser.email },
+        where: { email },
       });
 
       if (!user) {
+        // Create new user
         const passwordHash = await bcrypt.hash(Math.random().toString(36), 12);
         user = await prisma.user.create({
           data: {
-            email: googleUser.email,
-            name: googleUser.name,
+            email,
+            name: name || 'Google User',
             passwordHash,
             role: 'USER',
+            // avatarUrl: picture 
           },
         });
         logger.info({ userId: user.id, email: user.email }, 'User registered via Google OAuth');
@@ -205,7 +123,7 @@ router.get(
       });
 
       // Redirect to frontend with token
-      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3001';
+      // We encode the user object to pass basic info immediately
       res.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
         id: user.id,
         email: user.email,
@@ -215,7 +133,7 @@ router.get(
 
     } catch (err: any) {
       logger.error({ err }, 'Google OAuth callback error');
-      res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=auth_failed`);
+      res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
   })
 );

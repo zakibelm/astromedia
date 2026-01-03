@@ -14,10 +14,10 @@ export const globalRateLimiter = rateLimit({
   max: config.rateLimitMaxRequests,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    // @ts-ignore - Redis client compatibility
-    sendCommand: (...args: string[]) => redis.call(...args),
-  }),
+  // store: new RedisStore({
+  //   // @ts-ignore - Redis client compatibility
+  //   sendCommand: (...args: string[]) => redis.call(...args),
+  // }),
   handler: (req, res) => {
     logger.warn(
       { ip: req.ip, path: req.path },
@@ -43,11 +43,11 @@ export const authRateLimiter = rateLimit({
   max: 5, // 5 attempts per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    // @ts-ignore
-    sendCommand: (...args: string[]) => redis.call(...args),
-    prefix: 'rl:auth:',
-  }),
+  // store: new RedisStore({
+  //   // @ts-ignore
+  //   sendCommand: (...args: string[]) => redis.call(...args),
+  //   prefix: 'rl:auth:',
+  // }),
   handler: (req, res) => {
     logger.warn(
       { ip: req.ip, path: req.path },
@@ -134,11 +134,11 @@ export const aiGenerationRateLimiter = rateLimit({
   max: 10, // 10 requests per minute per user
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    // @ts-ignore
-    sendCommand: (...args: string[]) => redis.call(...args),
-    prefix: 'rl:ai:',
-  }),
+  // store: new RedisStore({
+  //   // @ts-ignore
+  //   sendCommand: (...args: string[]) => redis.call(...args),
+  //   prefix: 'rl:ai:',
+  // }),
   handler: (req, res) => {
     logger.warn(
       { userId: (req as AuthenticatedRequest).user?.id, path: req.path },

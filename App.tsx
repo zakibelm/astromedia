@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Dashboard from './components/Dashboard';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -29,7 +29,7 @@ const App: React.FC = () => {
     // Check for existing session
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
+
     if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -42,26 +42,26 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     setView('login');
-  };
+  }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = useCallback(() => {
     setView('dashboard');
-  };
+  }, []);
 
-  const handleAuthSuccess = (authUser: User, token: string) => {
+  const handleAuthSuccess = useCallback((authUser: User, token: string) => {
     setUser(authUser);
     // Clear URL params and redirect to dashboard
     window.history.replaceState({}, '', '/');
     setView('dashboard');
-  };
+  }, []);
 
-  const handleAuthError = (error: string) => {
+  const handleAuthError = useCallback((error: string) => {
     console.error('Auth error:', error);
     window.history.replaceState({}, '', '/');
     setView('login');
-  };
+  }, []);
 
   const handleBackToLanding = () => {
     setView('landing');
