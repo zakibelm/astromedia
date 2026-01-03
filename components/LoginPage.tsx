@@ -21,8 +21,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBack }) => {
     };
 
     const handleGoogleLogin = () => {
-        console.log('Google Login clicked');
-        onLoginSuccess();
+        // Redirect to backend Google OAuth endpoint
+        window.location.href = 'http://localhost:8000/api/v1/auth/google/login';
     };
 
     return (

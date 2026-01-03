@@ -109,6 +109,118 @@ router.post(
 );
 
 /**
+ * GET /api/v1/auth/google/login
+ * Redirect to Google OAuth
+ */
+router.get('/google/login', (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8000/api/v1/auth/google/callback',
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+/**
+ * GET /api/v1/auth/google/callback
+ * Handle Google OAuth callback
+ */
+router.get(
+  '/google/callback',
+  asyncHandler(async (req, res) => {
+    const { code, error } = req.query;
+
+    if (error) {
+      logger.error({ error }, 'Google OAuth error');
+      return res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=${error}`);
+    }
+
+    if (!code || typeof code !== 'string') {
+      return res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=no_code`);
+    }
+
+    try {
+      // Exchange code for tokens
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8000/api/v1/auth/google/callback',
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Token exchange failed');
+      }
+
+      const tokens = await tokenResponse.json();
+
+      // Get user info
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to get user info');
+      }
+
+      const googleUser = await userResponse.json();
+
+      // Find or create user
+      let user = await prisma.user.findUnique({
+        where: { email: googleUser.email },
+      });
+
+      if (!user) {
+        const passwordHash = await bcrypt.hash(Math.random().toString(36), 12);
+        user = await prisma.user.create({
+          data: {
+            email: googleUser.email,
+            name: googleUser.name,
+            passwordHash,
+            role: 'USER',
+          },
+        });
+        logger.info({ userId: user.id, email: user.email }, 'User registered via Google OAuth');
+      } else {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+        logger.info({ userId: user.id }, 'User logged in via Google OAuth');
+      }
+
+      // Generate JWT
+      const token = generateToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+
+      // Redirect to frontend with token
+      const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3001';
+      res.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      }))}`);
+
+    } catch (err: any) {
+      logger.error({ err }, 'Google OAuth callback error');
+      res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:3001'}/login?error=auth_failed`);
+    }
+  })
+);
+
+/**
  * POST /api/v1/auth/register
  * Register a new user
  */

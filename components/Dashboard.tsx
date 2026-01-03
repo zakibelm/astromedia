@@ -23,7 +23,17 @@ const mapGovernanceMode = (mode: GovernanceMode): Mode => {
     }
 };
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+    user?: {
+        id: string;
+        email: string;
+        name: string | null;
+        role: string;
+    } | null;
+    onLogout?: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     const [currentView, setCurrentView] = useState('dashboard');
     const [activeCampaign, setActiveCampaign] = useState<NewCampaignFormData | null>(null);
     const [campaignId, setCampaignId] = useState<string | null>(null);
@@ -194,6 +204,8 @@ const Dashboard: React.FC = () => {
                         console.log('Dashboard received onOpenSettings, switching view to settings');
                         setCurrentView('settings');
                     }}
+                    user={user}
+                    onLogout={onLogout}
                 />
 
                 <main className="flex-1 overflow-hidden relative">

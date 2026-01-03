@@ -6,9 +6,16 @@ import LanguageSwitcher from './LanguageSwitcher';
 interface HeaderProps {
   onStart: () => void;
   onOpenSettings?: () => void;
+  user?: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+  } | null;
+  onLogout?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onStart, onOpenSettings }) => {
+const Header: React.FC<HeaderProps> = ({ onStart, onOpenSettings, user, onLogout }) => {
   const { t } = useTranslation();
 
   return (
@@ -44,11 +51,24 @@ const Header: React.FC<HeaderProps> = ({ onStart, onOpenSettings }) => {
 
         <div className="h-8 w-px bg-white/10 mx-2"></div>
 
-        <div className="flex items-center space-x-2 text-sm font-medium text-white">
-          <span>JD-Enterprise-01</span>
+        <div className="flex items-center space-x-3 text-sm font-medium text-white">
+          <span>{user?.name || user?.email || 'Invité'}</span>
           <div className="h-8 w-8 rounded bg-dark-space-mid border border-slate-700 flex items-center justify-center">
-            <span className="text-xs text-astro-amber-400">JD</span>
+            <span className="text-xs text-astro-amber-400">
+              {user?.name ? user.name.substring(0, 2).toUpperCase() : 'IN'}
+            </span>
           </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="ml-2 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-red-500/20 rounded transition-colors"
+              title="Se déconnecter"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </header>

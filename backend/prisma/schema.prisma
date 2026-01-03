@@ -1,206 +1,443 @@
-// Prisma Schema for AstroMedia v2.0
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("NEON_DATABASE_URL")
-  directUrl = env("NEON_DATABASE_URL_DIRECT") // For migrations
-}
-
-// =====================
-// USER & AUTH
-// =====================
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  name          String?
-  company       String?
-  role          UserRole  @default(USER)
-  apiQuota      Int       @default(1000) // Monthly API call quota
-  apiUsed       Int       @default(0)
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastLoginAt   DateTime?
-
-  campaigns     Campaign[]
-  apiKeys       ApiKey[]
-  usage         UsageLog[]
-  aiAgents      AIAgent[]
-  workflows     Workflow[]
-
-  @@index([email])
-}
-
-enum UserRole {
-  USER
-  ADMIN
-  ENTERPRISE
+  provider  = "postgresql"
+  url       = env("NEON_DATABASE_URL")
+  directUrl = env("NEON_DATABASE_URL_DIRECT")
 }
 
 model ApiKey {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id
+  userId     String
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  User       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name        String
-  keyHash     String   @unique
-  keyPrefix   String   // First 8 chars for display (e.g., "sk_live_abc123...")
-
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
-
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
   @@index([keyHash])
+  @@index([userId])
 }
 
-// =====================
-// CAMPAIGNS
-// =====================
+model Asset {
+  id           String      @id
+  campaignId   String
+  type         AssetType
+  category     String
+  title        String?
+  description  String?
+  content      String?
+  fileUrl      String?
+  thumbnailUrl String?
+  mimeType     String?
+  fileSize     Int?
+  metadata     Json?
+  status       AssetStatus @default(PENDING)
+  validatedAt  DateTime?
+  validatedBy  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  Campaign     Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([status])
+  @@index([type])
+}
 
 model Campaign {
-  id              String         @id @default(cuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id
+  userId         String
+  name           String
+  status         CampaignStatus  @default(DRAFT)
+  governanceMode GovernanceMode  @default(SEMI_AUTO)
+  briefData      Json
+  brandProfile   String
+  goals          String[]
+  targetAudience String
+  budget         Decimal         @db.Decimal(10, 2)
+  currency       String          @default("USD")
+  timeline       String
+  currentPhase   String?
+  phaseStatuses  Json            @default("{}")
+  contextData    Json            @default("{}")
+  totalCost      Decimal         @default(0) @db.Decimal(10, 6)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  Asset          Asset[]
+  User           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  CampaignLog    CampaignLog[]
+  CampaignPhase  CampaignPhase[]
 
-  name            String
-  status          CampaignStatus @default(DRAFT)
-  governanceMode  GovernanceMode @default(SEMI_AUTO)
-
-  // Brief data (JSON)
-  briefData       Json
-
-  // Campaign context
-  brandProfile    String
-  goals           String[]
-  targetAudience  String
-  budget          Decimal        @db.Decimal(10, 2)
-  currency        String         @default("USD")
-  timeline        String
-
-  // Workflow state
-  currentPhase    String?
-  phaseStatuses   Json           @default("{}") // Record<phaseId, PhaseStatus>
-  contextData     Json           @default("{}") // Orchestrator context
-
-  // Metrics
-  totalCost       Decimal        @db.Decimal(10, 6) @default(0)
-  startedAt       DateTime?
-  completedAt     DateTime?
-
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  phases          CampaignPhase[]
-  assets          Asset[]
-  logs            CampaignLog[]
-
-  @@index([userId])
-  @@index([status])
   @@index([createdAt])
+  @@index([status])
+  @@index([userId])
 }
 
-enum CampaignStatus {
-  DRAFT
-  RUNNING
-  PAUSED
-  COMPLETED
-  FAILED
-  CANCELLED
-}
+model CampaignLog {
+  id         String   @id
+  campaignId String
+  level      LogLevel @default(INFO)
+  action     String
+  message    String?
+  phaseId    String?
+  agentId    String?
+  metadata   Json?
+  timestamp  DateTime @default(now())
+  Campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-enum GovernanceMode {
-  GUIDED      // Full human validation
-  SEMI_AUTO   // Key checkpoints only
-  AUTO        // Fully automated
+  @@index([campaignId])
+  @@index([level])
+  @@index([timestamp])
 }
 
 model CampaignPhase {
-  id            String       @id @default(cuid())
-  campaignId    String
-  campaign      Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  phaseId       String       // e.g., "strategy", "seo", "designer"
-  agentId       String       // Agent responsible
-  status        PhaseStatus  @default(IDLE)
-
-  inputData     Json?
-  outputData    Json?
-
-  attemptCount  Int          @default(0)
-  maxRetries    Int          @default(3)
-
-  startedAt     DateTime?
-  completedAt   DateTime?
-  latencyMs     Int?
-
-  cost          Decimal      @db.Decimal(10, 6) @default(0)
-  modelUsed     String?
-
-  errorMessage  String?
-
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String      @id
+  campaignId   String
+  phaseId      String
+  agentId      String
+  status       PhaseStatus @default(IDLE)
+  inputData    Json?
+  outputData   Json?
+  attemptCount Int         @default(0)
+  maxRetries   Int         @default(3)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  latencyMs    Int?
+  cost         Decimal     @default(0) @db.Decimal(10, 6)
+  modelUsed    String?
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  Campaign     Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([phaseId])
   @@index([status])
 }
 
-enum PhaseStatus {
-  IDLE
-  READY
-  RUNNING
-  WAITING_VALIDATION
-  COMPLETED
-  FAILED
-  SKIPPED
+model KnowledgeFile {
+  id          String   @id
+  userId      String
+  name        String
+  fileUrl     String
+  mimeType    String
+  fileSize    Int
+  isProcessed Boolean  @default(false)
+  chunkCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
 
-// =====================
-// ASSETS (Images, Videos, Content)
-// =====================
+model SystemMetric {
+  id          String   @id
+  metricName  String
+  metricValue Float
+  labels      Json?
+  timestamp   DateTime @default(now())
 
-model Asset {
-  id            String      @id @default(cuid())
-  campaignId    String
-  campaign      Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@index([metricName])
+  @@index([timestamp])
+}
 
-  type          AssetType
-  category      String      // e.g., "visual_A", "visual_B", "video_narrative"
+model UsageLog {
+  id         String   @id
+  userId     String
+  endpoint   String
+  method     String
+  statusCode Int
+  provider   String?
+  model      String?
+  tokensIn   Int      @default(0)
+  tokensOut  Int      @default(0)
+  latencyMs  Int?
+  cost       Decimal  @default(0) @db.Decimal(10, 6)
+  userAgent  String?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Content
-  title         String?
-  description   String?
-  content       String?     @db.Text // For text assets
+  @@index([timestamp])
+  @@index([userId])
+}
 
-  // File storage
-  fileUrl       String?     // GCS/S3 URL
-  thumbnailUrl  String?
-  mimeType      String?
-  fileSize      Int?
+model User {
+  id           String     @id
+  email        String     @unique
+  passwordHash String
+  name         String?
+  company      String?
+  role         UserRole   @default(USER)
+  apiQuota     Int        @default(1000)
+  apiUsed      Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  lastLoginAt  DateTime?
+  ApiKey       ApiKey[]
+  Campaign     Campaign[]
+  UsageLog     UsageLog[]
 
-  // Metadata
-  metadata      Json?       // Model used, prompt, etc.
+  @@index([email])
+}
 
-  // Validation
-  status        AssetStatus @default(PENDING)
-  validatedAt   DateTime?
-  validatedBy   String?     // userId
+model agent_community_interactions {
+  id                    String   @id
+  comment               String
+  response              String
+  action                String
+  platform              String
+  author                String?
+  sentiment             String?
+  priority              String?
+  requires_human        Boolean  @default(false)
+  response_time_seconds Float?
+  campaign_id           String?
+  lead_id               String?
+  context               Json?
+  created_at            DateTime @default(now())
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  @@index([created_at(sort: Desc)])
+  @@index([platform])
+  @@index([priority])
+  @@index([requires_human])
+  @@index([sentiment])
+}
 
-  @@index([campaignId])
-  @@index([type])
+model agent_compliance_audits {
+  id                 String   @id
+  content_type       String
+  status             String
+  risk_level         String
+  safe_to_publish    Boolean
+  violations_count   Int      @default(0)
+  violations_details Json?
+  target_regions     Json
+  checks_performed   Json
+  corrected_version  String?
+  required_mentions  Json?
+  campaign_id        String?
+  reviewed_by_human  Boolean  @default(false)
+  created_at         DateTime @default(now())
+
+  @@index([created_at(sort: Desc)])
+  @@index([risk_level])
+  @@index([safe_to_publish])
   @@index([status])
+}
+
+model agent_crisis_alerts {
+  id                   String    @id
+  brand                String
+  crisis_score         Int
+  severity             String
+  crisis_type          String
+  sentiment_positive   Float?
+  sentiment_neutral    Float?
+  sentiment_negative   Float?
+  sentiment_trend      String?
+  key_issues           Json?
+  amplifiers           Json?
+  recommended_actions  Json?
+  statement_draft      String?
+  escalation_required  Boolean   @default(false)
+  reputation_damage    String?
+  financial_risk       String?
+  recovery_time        String?
+  status               String    @default("open")
+  resolved_at          DateTime?
+  monitoring_frequency String?
+  detected_at          DateTime  @default(now())
+  last_updated         DateTime
+
+  @@index([brand])
+  @@index([detected_at(sort: Desc)])
+  @@index([escalation_required])
+  @@index([severity])
+  @@index([status])
+}
+
+model agent_metrics {
+  id                String    @id
+  agent_type        String
+  total_calls       Int       @default(0)
+  successful_calls  Int       @default(0)
+  failed_calls      Int       @default(0)
+  avg_response_time Float     @default(0)
+  min_response_time Float?
+  max_response_time Float?
+  last_execution    DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime
+  period            String    @default("all_time")
+
+  @@unique([agent_type, period])
+  @@index([agent_type])
+  @@index([period])
+}
+
+model agent_seo_optimizations {
+  id                     String   @id
+  content_preview        String
+  industry               String
+  content_type           String
+  primary_keywords       Json
+  secondary_keywords     Json
+  seo_title              String?
+  meta_description       String?
+  factual_accuracy_score Int
+  citation_readiness     Boolean  @default(false)
+  eeat_score             Int?
+  citation_excerpts      Json?
+  campaign_id            String?
+  created_at             DateTime @default(now())
+
+  @@index([content_type])
+  @@index([created_at(sort: Desc)])
+  @@index([factual_accuracy_score])
+  @@index([industry])
+}
+
+model agent_trends {
+  id                 String   @id
+  title              String
+  description        String
+  industry           String
+  virality_score     Int
+  relevance_score    Int
+  velocity           String?
+  volume             Int?
+  engagement_rate    Float?
+  source             String
+  hashtags           Json?
+  durability         String?
+  recommended_action String?
+  recommended_format String?
+  recommended_timing String?
+  estimated_reach    String?
+  difficulty         String?
+  detected_at        DateTime @default(now())
+  acted_upon         Boolean  @default(false)
+  timeframe          String?
+
+  @@index([acted_upon])
+  @@index([detected_at(sort: Desc)])
+  @@index([industry])
+  @@index([relevance_score])
+  @@index([virality_score])
+}
+
+model cmo_reports {
+  id            String   @id
+  company_name  String
+  report_data   Json
+  total_ai_cost Decimal? @db.Decimal(10, 6)
+  created_at    DateTime @default(now())
+
+  @@index([created_at(sort: Desc)])
+}
+
+model instagram_interactions {
+  id               String    @id
+  message_id       String    @unique
+  sender_id        String
+  message_text     String?
+  reply_text       String?
+  sentiment        String?
+  ai_cost          Decimal?  @db.Decimal(10, 6)
+  response_time_ms Int?
+  timestamp        DateTime?
+  created_at       DateTime  @default(now())
+
+  @@index([sender_id])
+  @@index([sentiment])
+  @@index([timestamp(sort: Desc)])
+}
+
+model lead_profiles {
+  id                 String     @id
+  platform_user_id   String     @unique
+  platform           String
+  instagram_user_id  String?
+  username           String?
+  display_name       String?
+  business_name      String?
+  industry           String?
+  location           String?
+  follower_count     Int?
+  engagement_rate    Decimal?   @db.Decimal(5, 2)
+  last_post_date     DateTime?  @db.Date
+  engagement_score   Int        @default(0)
+  total_interactions Int        @default(0)
+  lead_status        LeadStatus @default(NEW)
+  notes              String?
+  tags               String[]   @default([])
+  discovered_at      DateTime   @default(now())
+  last_interaction   DateTime?
+  created_at         DateTime   @default(now())
+  updated_at         DateTime
+
+  @@index([engagement_score(sort: Desc)])
+  @@index([instagram_user_id])
+  @@index([lead_status])
+  @@index([platform])
+  @@index([platform, lead_status])
+  @@index([platform_user_id])
+}
+
+model queue_jobs {
+  id            String    @id
+  queue_name    String
+  job_id        String    @unique
+  job_data      Json
+  status        String    @default("pending")
+  progress      Int       @default(0)
+  result        Json?
+  error_message String?
+  attempts_made Int       @default(0)
+  max_attempts  Int       @default(3)
+  created_at    DateTime  @default(now())
+  started_at    DateTime?
+  completed_at  DateTime?
+
+  @@index([created_at(sort: Desc)])
+  @@index([queue_name])
+  @@index([status])
+}
+
+model social_interactions {
+  id               String         @id
+  platform         SocialPlatform
+  message_id       String
+  sender_id        String
+  message_text     String?
+  reply_text       String?
+  sentiment        String?
+  ai_cost          Decimal?       @db.Decimal(10, 6)
+  response_time_ms Int?
+  timestamp        DateTime?
+  metadata         Json?
+  created_at       DateTime       @default(now())
+
+  @@unique([platform, message_id])
+  @@index([platform])
+  @@index([platform, sender_id])
+  @@index([sender_id])
+  @@index([sentiment])
+  @@index([timestamp(sort: Desc)])
+}
+
+enum AssetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
 }
 
 enum AssetType {
@@ -213,214 +450,19 @@ enum AssetType {
   VOICEOVER
 }
 
-enum AssetStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  ARCHIVED
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
-// =====================
-// LOGGING & ANALYTICS
-// =====================
-
-model CampaignLog {
-  id            String   @id @default(cuid())
-  campaignId    String
-  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  level         LogLevel @default(INFO)
-  action        String
-  message       String?  @db.Text
-
-  phaseId       String?
-  agentId       String?
-
-  metadata      Json?
-
-  timestamp     DateTime @default(now())
-
-  @@index([campaignId])
-  @@index([timestamp])
-  @@index([level])
-}
-
-enum LogLevel {
-  DEBUG
-  INFO
-  WARN
-  ERROR
-  CRITICAL
-}
-
-model UsageLog {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Request info
-  endpoint      String
-  method        String
-  statusCode    Int
-
-  // LLM usage
-  provider      String?
-  model         String?
-  tokensIn      Int      @default(0)
-  tokensOut     Int      @default(0)
-  latencyMs     Int?
-
-  // Cost tracking
-  cost          Decimal  @db.Decimal(10, 6) @default(0)
-
-  // Metadata
-  userAgent     String?
-  ipAddress     String?
-
-  timestamp     DateTime @default(now())
-
-  @@index([userId])
-  @@index([timestamp])
-}
-
-// =====================
-// KNOWLEDGE BASE (RAG)
-// =====================
-
-model KnowledgeFile {
-  id            String   @id @default(cuid())
-  userId        String
-
-  name          String
-  fileUrl       String   // GCS storage URL
-  mimeType      String
-  fileSize      Int
-
-  // Embeddings (for future RAG implementation)
-  isProcessed   Boolean  @default(false)
-  chunkCount    Int      @default(0)
-
-  createdAt     DateTime @default(now())
-  
-  agentId       String?
-  agent         AIAgent? @relation(fields: [agentId], references: [id])
-
-  @@index([userId])
-}
-
-// =====================
-// SYSTEM METRICS
-// =====================
-
-model SystemMetric {
-  id            String   @id @default(cuid())
-
-  metricName    String
-  metricValue   Float
-  labels        Json?    // Additional dimensions
-
-  timestamp     DateTime @default(now())
-
-  @@index([metricName])
-  @@index([timestamp])
-}
-
-// =====================
-// INSTAGRAM AUTOMATION
-// =====================
-
-// Multi-platform social media interactions
-model SocialInteraction {
-  id              String           @id @default(cuid())
-  platform        SocialPlatform   // instagram, facebook, linkedin, tiktok, twitter
-  messageId       String           @map("message_id")
-  senderId        String           @map("sender_id")
-  messageText     String?          @map("message_text") @db.Text
-  replyText       String?          @map("reply_text") @db.Text
-  sentiment       String?          // positive, neutral, negative
-  aiCost          Decimal?         @map("ai_cost") @db.Decimal(10, 6)
-  responseTimeMs  Int?             @map("response_time_ms")
-  timestamp       DateTime?
-  metadata        Json?            // Platform-specific data (e.g., type: comment/dm for TikTok)
-  createdAt       DateTime         @default(now()) @map("created_at")
-
-  @@unique([platform, messageId]) // Composite unique constraint
-  @@index([platform])
-  @@index([senderId])
-  @@index([timestamp(sort: Desc)])
-  @@index([sentiment])
-  @@index([platform, senderId]) // Query by platform+user
-  @@map("social_interactions")
-}
-
-enum SocialPlatform {
-  instagram
-  facebook
-  linkedin
-  tiktok
-  twitter
-}
-
-// Backward compatibility: Keep old table for existing data
-model InstagramInteraction {
-  id              String    @id @default(cuid())
-  messageId       String    @unique @map("message_id")
-  senderId        String    @map("sender_id")
-  messageText     String?   @map("message_text") @db.Text
-  replyText       String?   @map("reply_text") @db.Text
-  sentiment       String?   // positive, neutral, negative
-  aiCost          Decimal?  @map("ai_cost") @db.Decimal(10, 6)
-  responseTimeMs  Int?      @map("response_time_ms")
-  timestamp       DateTime?
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@index([senderId])
-  @@index([timestamp(sort: Desc)])
-  @@index([sentiment])
-  @@map("instagram_interactions")
-}
-
-// Multi-platform lead tracking
-model LeadProfile {
-  id                String         @id @default(cuid())
-  platformUserId    String         @unique @map("platform_user_id") // Format: "platform:userId" (e.g., "instagram:123")
-  platform          String         // instagram, facebook, linkedin, tiktok, twitter
-
-  // Legacy field for backward compatibility
-  instagramUserId   String?        @map("instagram_user_id")
-
-  // Profile data
-  username          String?
-  displayName       String?        @map("display_name")
-  businessName      String?        @map("business_name")
-  industry          String?
-  location          String?
-  followerCount     Int?           @map("follower_count")
-  engagementRate    Decimal?       @map("engagement_rate") @db.Decimal(5, 2)
-  lastPostDate      DateTime?      @map("last_post_date") @db.Date
-
-  // Engagement metrics
-  engagementScore   Int            @default(0) @map("engagement_score")
-  totalInteractions Int            @default(0) @map("total_interactions")
-  leadStatus        LeadStatus     @default(NEW) @map("lead_status")
-
-  // Additional info
-  notes             String?        @db.Text
-  tags              String[]       @default([])
-
-  // Timestamps
-  discoveredAt      DateTime       @default(now()) @map("discovered_at")
-  lastInteraction   DateTime?      @map("last_interaction")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-
-  @@index([platformUserId])
-  @@index([platform])
-  @@index([instagramUserId])
-  @@index([engagementScore(sort: Desc)])
-  @@index([leadStatus])
-  @@index([platform, leadStatus])
-  @@map("lead_profiles")
+enum GovernanceMode {
+  GUIDED
+  SEMI_AUTO
+  AUTO
 }
 
 enum LeadStatus {
@@ -432,297 +474,34 @@ enum LeadStatus {
   LOST
 }
 
-// =====================
-// CMO AGENT REPORTS
-// =====================
-
-model CmoReport {
-  id            String   @id @default(cuid())
-  companyName   String   @map("company_name")
-  reportData    Json     @map("report_data")
-  totalAiCost   Decimal? @map("total_ai_cost") @db.Decimal(10, 6)
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  @@index([createdAt(sort: Desc)])
-  @@map("cmo_reports")
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  CRITICAL
 }
 
-// =====================
-// QUEUE JOBS TRACKING (Replaces n8n)
-// =====================
-
-model QueueJob {
-  id              String    @id @default(cuid())
-  queueName       String    @map("queue_name") // instagram, lead-gen, content-scheduler
-  jobId           String    @unique @map("job_id") // BullMQ job ID
-  jobData         Json      @map("job_data")
-  status          String    @default("pending") // pending, active, completed, failed
-  progress        Int       @default(0)
-  result          Json?
-  errorMessage    String?   @map("error_message") @db.Text
-  attemptsMade    Int       @default(0) @map("attempts_made")
-  maxAttempts     Int       @default(3) @map("max_attempts")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-
-  @@index([queueName])
-  @@index([status])
-  @@index([createdAt(sort: Desc)])
-  @@map("queue_jobs")
+enum PhaseStatus {
+  IDLE
+  READY
+  RUNNING
+  WAITING_VALIDATION
+  COMPLETED
+  FAILED
+  SKIPPED
 }
 
-// =====================
-// AI AGENTS (Phase 1 & 2)
-// =====================
-
-// Community Manager Agent - Interactions tracking
-model AgentCommunityInteraction {
-  id              String    @id @default(cuid())
-  comment         String    @db.Text
-  response        String    @db.Text
-  action          String    // reply, like, share, moderate, escalate
-  platform        String    // linkedin, instagram, facebook, twitter, tiktok
-  author          String?
-  sentiment       String?   // positive, neutral, negative
-  priority        String?   // low, medium, high, urgent
-  requiresHuman   Boolean   @default(false) @map("requires_human")
-  responseTime    Float?    @map("response_time_seconds")
-
-  // Relationships
-  campaignId      String?   @map("campaign_id")
-  leadId          String?   @map("lead_id")
-
-  // Metadata
-  context         Json?
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@index([platform])
-  @@index([sentiment])
-  @@index([priority])
-  @@index([requiresHuman])
-  @@index([createdAt(sort: Desc)])
-  @@map("agent_community_interactions")
+enum SocialPlatform {
+  instagram
+  facebook
+  linkedin
+  tiktok
+  twitter
 }
 
-// SEO/AIO Agent - Content optimizations
-model AgentSEOOptimization {
-  id                    String    @id @default(cuid())
-  contentPreview        String    @db.Text @map("content_preview")
-  industry              String
-  contentType           String    @map("content_type") // article, post, landing_page
-
-  // SEO Data
-  primaryKeywords       Json      @map("primary_keywords")
-  secondaryKeywords     Json      @map("secondary_keywords")
-  seoTitle              String?   @map("seo_title")
-  metaDescription       String?   @map("meta_description") @db.Text
-
-  // AIO Data
-  factualAccuracyScore  Int       @map("factual_accuracy_score") // 0-100
-  citationReadiness     Boolean   @default(false) @map("citation_readiness")
-  eeatScore             Int?      @map("eeat_score") // 0-100
-  citationExcerpts      Json?     @map("citation_excerpts")
-
-  // Relationships
-  campaignId            String?   @map("campaign_id")
-
-  createdAt             DateTime  @default(now()) @map("created_at")
-
-  @@index([industry])
-  @@index([contentType])
-  @@index([factualAccuracyScore])
-  @@index([createdAt(sort: Desc)])
-  @@map("agent_seo_optimizations")
-}
-
-// Compliance Agent - Legal audits
-model AgentComplianceAudit {
-  id                 String    @id @default(cuid())
-  contentType        String    @map("content_type") // email, post, landing_page, ad
-  status             String    // compliant, minor_issues, major_issues, critical
-  riskLevel          String    @map("risk_level") // low, medium, high, critical
-  safeToPublish      Boolean   @map("safe_to_publish")
-
-  // Violations
-  violationsCount    Int       @default(0) @map("violations_count")
-  violationsDetails  Json?     @map("violations_details")
-
-  // Regions & Checks
-  targetRegions      Json      @map("target_regions") // ["CA", "EU", "US"]
-  checksPerformed    Json      @map("checks_performed") // ["CASL", "RGPD"]
-
-  // Corrections
-  correctedVersion   String?   @db.Text @map("corrected_version")
-  requiredMentions   Json?     @map("required_mentions")
-
-  // Relationships
-  campaignId         String?   @map("campaign_id")
-  reviewedByHuman    Boolean   @default(false) @map("reviewed_by_human")
-
-  createdAt          DateTime  @default(now()) @map("created_at")
-
-  @@index([status])
-  @@index([riskLevel])
-  @@index([safeToPublish])
-  @@index([createdAt(sort: Desc)])
-  @@map("agent_compliance_audits")
-}
-
-// Trend Scout Agent - Detected trends
-model AgentTrend {
-  id                 String    @id @default(cuid())
-  title              String
-  description        String    @db.Text
-  industry           String
-
-  // Metrics
-  viralityScore      Int       @map("virality_score") // 0-100
-  relevanceScore     Int       @map("relevance_score") // 0-100
-  velocity           String?   // "mentions/hour"
-  volume             Int?      // total mentions
-  engagementRate     Float?    @map("engagement_rate")
-
-  // Characteristics
-  source             String    // twitter, linkedin, tiktok, google_trends
-  hashtags           Json?
-  durability         String?   // ephemeral, short-term, long-term
-
-  // Opportunity
-  recommendedAction  String?   @db.Text @map("recommended_action")
-  recommendedFormat  String?   @map("recommended_format") // video, carousel, thread
-  recommendedTiming  String?   @map("recommended_timing") // now, today, this_week
-  estimatedReach     String?   @map("estimated_reach") // 10K, 100K, 1M+
-  difficulty         String?   // easy, medium, hard
-
-  // Tracking
-  detectedAt         DateTime  @default(now()) @map("detected_at")
-  actedUpon          Boolean   @default(false) @map("acted_upon")
-  timeframe          String?   // 24h, 7d, 30d
-
-  @@index([industry])
-  @@index([viralityScore])
-  @@index([relevanceScore])
-  @@index([actedUpon])
-  @@index([detectedAt(sort: Desc)])
-  @@map("agent_trends")
-}
-
-// Crisis Manager Agent - Crisis alerts
-model AgentCrisisAlert {
-  id                   String    @id @default(cuid())
-  brand                String
-  crisisScore          Int       @map("crisis_score") // 0-100
-  severity             String    // normal, watch, alert, crisis
-  crisisType           String    @map("crisis_type") // product, service, employee, security
-
-  // Sentiment Analysis
-  sentimentPositive    Float?    @map("sentiment_positive")
-  sentimentNeutral     Float?    @map("sentiment_neutral")
-  sentimentNegative    Float?    @map("sentiment_negative")
-  sentimentTrend       String?   @map("sentiment_trend") // improving, stable, worsening
-
-  // Key Info
-  keyIssues            Json?     @map("key_issues")
-  amplifiers           Json?     // Influencers, media, hashtags
-
-  // Actions
-  recommendedActions   Json?     @map("recommended_actions")
-  statementDraft       String?   @db.Text @map("statement_draft")
-  escalationRequired   Boolean   @default(false) @map("escalation_required")
-
-  // Impact
-  reputationDamage     String?   @map("reputation_damage") // low, medium, high, severe
-  financialRisk        String?   @map("financial_risk") // low, medium, high
-  recoveryTime         String?   @map("recovery_time") // days, weeks, months
-
-  // Status
-  status               String    @default("open") // open, monitoring, resolved
-  resolvedAt           DateTime? @map("resolved_at")
-  monitoringFrequency  String?   @map("monitoring_frequency") // 15min, 1h, 4h, daily
-
-  // Tracking
-  detectedAt           DateTime  @default(now()) @map("detected_at")
-  lastUpdated          DateTime  @updatedAt @map("last_updated")
-
-  @@index([brand])
-  @@index([severity])
-  @@index([status])
-  @@index([escalationRequired])
-  @@index([detectedAt(sort: Desc)])
-  @@map("agent_crisis_alerts")
-}
-
-// Agent Performance Metrics
-model AgentMetrics {
-  id                String    @id @default(cuid())
-  agentType         String    @map("agent_type") // community_manager, seo_aio, compliance, trend_scout, crisis_manager
-
-  // Counts
-  totalCalls        Int       @default(0) @map("total_calls")
-  successfulCalls   Int       @default(0) @map("successful_calls")
-  failedCalls       Int       @default(0) @map("failed_calls")
-
-  // Performance
-  avgResponseTime   Float     @default(0) @map("avg_response_time") // seconds
-  minResponseTime   Float?    @map("min_response_time")
-  maxResponseTime   Float?    @map("max_response_time")
-
-  // Dates
-  lastExecution     DateTime? @map("last_execution")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
-  // Period (for time-based analytics)
-  period            String    @default("all_time") // daily, weekly, monthly, all_time
-
-  @@unique([agentType, period])
-  @@index([agentType])
-  @@index([period])
-  @@map("agent_metrics")
-}
-
-// =====================
-// GALLERY SYSTEM (User-Defined)
-// =====================
-
-model AIAgent {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name          String
-  role          String
-  model         String   // gpt-4, claude-3, etc.
-  systemPrompt  String   @db.Text
-  avatarUrl     String?
-
-  // RAG Configuration
-  ragEnabled    Boolean  @default(false)
-  // Simple relation for V1 - knowledgeFiles associated with this agent
-  knowledgeFiles KnowledgeFile[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model Workflow {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name          String
-  description   String?
-  steps         Json     // Array of steps config
-  
-  // Orchestrator Config
-  orchestratorPrompt String? @db.Text
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([userId])
+enum UserRole {
+  USER
+  ADMIN
+  ENTERPRISE
 }
