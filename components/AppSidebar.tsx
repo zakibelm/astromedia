@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
 import Logo from './Logo';
 
@@ -9,6 +9,16 @@ interface SidebarProps {
 
 const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     const { t } = useTranslation();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const toggleMobileMenu = useCallback(() => {
+        setIsMobileMenuOpen(prev => !prev);
+    }, []);
+
+    const handleMenuItemClick = useCallback((view: string) => {
+        setCurrentView(view);
+        setIsMobileMenuOpen(false); // Close mobile menu after selection
+    }, [setCurrentView]);
 
     const menuItems = [
         { id: 'dashboard', label: 'Tableau de bord', icon: <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /> },
@@ -21,7 +31,40 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
     ];
 
     return (
-        <aside className="w-64 bg-[#10051a] flex flex-col border-r border-white/5 shrink-0 h-screen font-sans">
+        <>
+            {/* Mobile Menu Button */}
+            <button
+                onClick={toggleMobileMenu}
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#10051a] border border-white/10 rounded-lg text-white hover:bg-white/5 transition-colors"
+                aria-label="Toggle menu"
+            >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {isMobileMenuOpen ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                </svg>
+            </button>
+
+            {/* Mobile Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/50 z-40"
+                    onClick={toggleMobileMenu}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside
+                className={`
+                    w-64 bg-[#10051a] flex flex-col border-r border-white/5 shrink-0 h-screen font-sans
+                    fixed md:relative z-40
+                    transition-transform duration-300 ease-in-out
+                    ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                `}
+            >
             {/* Header / Logo */}
             <div className="p-6 mb-2">
                 <div className="flex items-center space-x-3 mb-1">
@@ -37,14 +80,14 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
                     return (
                         <button
                             key={item.id}
-                            onClick={() => setCurrentView(item.id)}
+                            onClick={() => handleMenuItemClick(item.id)}
                             className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${isActive
-                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_0_15px_rgba(251,191,36,0.3)]'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <svg
-                                className={`mr-3 h-5 w-5 transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-purple-400'}`}
+                                className={`mr-3 h-5 w-5 transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-amber-400'}`}
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -61,7 +104,7 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
             {/* User Profile Footer */}
             <div className="p-4 border-t border-white/5">
                 <div className="flex items-center p-3 rounded-xl bg-[#1a1025] border border-white/5">
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-xs font-bold text-white">
                         JD
                     </div>
                     <div className="ml-3">
@@ -71,7 +114,8 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => 
                 </div>
             </div>
         </aside>
+        </>
     );
 };
 
-export default AppSidebar;
+export default memo(AppSidebar);

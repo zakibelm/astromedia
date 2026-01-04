@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import AppSidebar from './AppSidebar';
 import MainContent from './MainContent';
 import Header from './Header';
@@ -34,15 +34,15 @@ const Dashboard: React.FC = () => {
     const orchestratorStateRef = useRef<CampaignState | null>(null);
     const orchestratorInstanceRef = useRef<{ stop: () => void } | null>(null);
 
-    const handleNewCampaignRequest = () => {
+    const handleNewCampaignRequest = useCallback(() => {
         setIsModalOpen(true);
-    };
+    }, []);
 
-    const handleCloseModal = () => {
+    const handleCloseModal = useCallback(() => {
         setIsModalOpen(false);
-    };
+    }, []);
 
-    const handleAddFile = (file: KnowledgeFile) => {
+    const handleAddFile = useCallback((file: KnowledgeFile) => {
         setKnowledgeFiles(prevFiles => {
             const updatedFiles = [...prevFiles, file];
             if (orchestratorStateRef.current) {
@@ -51,9 +51,9 @@ const Dashboard: React.FC = () => {
             }
             return updatedFiles;
         });
-    };
+    }, [campaignId]);
 
-    const handleLaunchCampaign = (formData: NewCampaignFormData) => {
+    const handleLaunchCampaign = useCallback((formData: NewCampaignFormData) => {
         try {
             // Nettoyer l'ancienne campagne si elle existe
             if (orchestratorInstanceRef.current) {
@@ -147,25 +147,25 @@ const Dashboard: React.FC = () => {
             setWorkflowStatus({});
             alert(`Erreur lors du lancement de la campagne: ${error.message}\n\nVeuillez réessayer ou vérifier la console pour plus de détails.`);
         }
-    };
+    }, []);
 
-    const handleApprovePhase = (phaseId: string, data?: any) => {
+    const handleApprovePhase = useCallback((phaseId: string, data?: any) => {
         if (orchestratorStateRef.current) {
             console.log(`[Human Action] Approving phase: ${phaseId}`, data || '');
             approvePhase(defaultPlaybook, orchestratorStateRef.current, {
                 onPhaseStatus: (id, status) => setWorkflowStatus(prev => ({ ...prev, [id]: status as WorkflowState[string] }))
             }, phaseId, data);
         }
-    };
+    }, []);
 
-    const handleRejectPhase = (phaseId: string, reason: string) => {
+    const handleRejectPhase = useCallback((phaseId: string, reason: string) => {
         if (orchestratorStateRef.current) {
             console.log(`[Human Action] Rejecting phase: ${phaseId} for reason: ${reason}`);
             rejectPhase(defaultPlaybook, orchestratorStateRef.current, {
                 onPhaseStatus: (id, status) => setWorkflowStatus(prev => ({ ...prev, [id]: status as WorkflowState[string] }))
             }, phaseId, reason);
         }
-    };
+    }, []);
 
     // S'assure de stopper l'orchestrateur au démontage du composant
     useEffect(() => {
@@ -217,4 +217,4 @@ const Dashboard: React.FC = () => {
     );
 };
 
-export default Dashboard;
+export default memo(Dashboard);
